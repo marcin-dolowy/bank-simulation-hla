@@ -3,10 +3,7 @@ package window_manager;
 import hla.rti1516e.*;
 import hla.rti1516e.encoding.EncoderFactory;
 import hla.rti1516e.encoding.HLAinteger32BE;
-import hla.rti1516e.exceptions.FederatesCurrentlyJoined;
-import hla.rti1516e.exceptions.FederationExecutionAlreadyExists;
-import hla.rti1516e.exceptions.FederationExecutionDoesNotExist;
-import hla.rti1516e.exceptions.RTIexception;
+import hla.rti1516e.exceptions.*;
 import hla.rti1516e.time.HLAfloat64Interval;
 import hla.rti1516e.time.HLAfloat64Time;
 import hla.rti1516e.time.HLAfloat64TimeFactory;
@@ -24,26 +21,30 @@ public class WindowFederate {
     private HLAfloat64TimeFactory timeFactory;
     protected EncoderFactory encoderFactory;
 
-    protected ObjectClassHandle storageHandle;
+    protected ObjectClassHandle windowHandle;
     protected AttributeHandle storageMaxHandle;
     protected AttributeHandle storageAvailableHandle;
-    protected InteractionClassHandle getProductsHandle;
+
+    protected InteractionClassHandle freeWindowID;
+    protected InteractionClassHandle moveCustomerToWindow;
+
+    private double serviceEndTime = 5;
+
 
     protected int storageMax = 0;
     protected int storageAvailable = 0;
 
+    private Window window0;
     private Window window1;
-    private Window window2;
 
     public WindowFederate() {
+        window0 = new Window(0);
         window1 = new Window(1);
-        window2 = new Window(2);
     }
 
     private void log(String message) {
         System.out.println("WindowFederate   : " + message);
     }
-
 
     private void waitForUser() {
         log(" >>>>>>>>>> Press Enter to Continue <<<<<<<<<<");
@@ -112,19 +113,15 @@ public class WindowFederate {
 
         while (fedamb.isRunning) {
 
-            //TU NAPISAĆ LOGIKĘ
-
-
-
+            serviceCustomerInWindow(window0);
+            serviceCustomerInWindow(window1);
 
             advanceTime(1);
             log("Time Advanced to " + fedamb.federateTime);
         }
 
-
         rtiamb.resignFederationExecution(ResignAction.DELETE_OBJECTS);
         log("Resigned from Federation");
-
 
         try {
             rtiamb.destroyFederationExecution("ExampleFederation");
@@ -133,6 +130,23 @@ public class WindowFederate {
             log("No need to destroy federation, it doesn't exist");
         } catch (FederatesCurrentlyJoined fcj) {
             log("Didn't destroy federation, federates still joined");
+        }
+    }
+
+    private void serviceCustomerInWindow(Window window) throws FederateNotExecutionMember, NotConnected, NameNotFound, InvalidInteractionClassHandle, RTIinternalError, InteractionClassNotPublished, InteractionParameterNotDefined, InteractionClassNotDefined, SaveInProgress, RestoreInProgress {
+        if (window.isAvailable()) {
+            window.startService(fedamb.federateTime);
+
+            if (fedamb.federateTime == serviceEndTime) {
+                window.endService();
+
+                ParameterHandleValueMap parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(1);
+                ParameterHandle addWindowIdHandle = rtiamb.getParameterHandle(freeWindowID, "windowId");
+                HLAinteger32BE windowID = encoderFactory.createHLAinteger32BE(window.getId());
+
+                parameterHandleValueMap.put(addWindowIdHandle, windowID.toByteArray());
+                rtiamb.sendInteraction(freeWindowID, parameterHandleValueMap, generateTag());
+            }
         }
     }
 
@@ -151,20 +165,13 @@ public class WindowFederate {
     }
 
     private void publishAndSubscribe() throws RTIexception {
+        String moveCustomerToWindowName = "HLAinteractionRoot.moveCustomerToWindow";
+        this.moveCustomerToWindow = rtiamb.getInteractionClassHandle(moveCustomerToWindowName);
+        rtiamb.subscribeInteractionClass(moveCustomerToWindow);
 
-        this.storageHandle = rtiamb.getObjectClassHandle("HLAobjectRoot.moveCustomerToWindow");
-        this.storageMaxHandle = rtiamb.getAttributeHandle(storageHandle, "max");
-        this.storageAvailableHandle = rtiamb.getAttributeHandle(storageHandle, "available");
-
-        AttributeHandleSet attributes = rtiamb.getAttributeHandleSetFactory().create();
-        attributes.add(storageMaxHandle);
-        attributes.add(storageAvailableHandle);
-        rtiamb.subscribeObjectClassAttributes(storageHandle, attributes);
-
-        String iname = "HLAinteractionRoot.freeWindow";
-        getProductsHandle = rtiamb.getInteractionClassHandle(iname);
-
-        rtiamb.publishInteractionClass(getProductsHandle);
+        String freeWindowName = "HLAinteractionRoot.freeWindow";
+        this.freeWindowID = rtiamb.getInteractionClassHandle(freeWindowName);
+        rtiamb.publishInteractionClass(this.freeWindowID);
     }
 
     private void advanceTime(double timestep) throws RTIexception {

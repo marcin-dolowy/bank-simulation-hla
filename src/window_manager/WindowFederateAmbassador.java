@@ -242,7 +242,7 @@ public class WindowFederateAmbassador extends NullFederateAmbassador {
         StringBuilder builder = new StringBuilder("Interaction Received:");
 
         builder.append(" handle=" + interactionClass);
-        if (interactionClass.equals(federate.getProductsHandle)) {
+        if (interactionClass.equals(federate.freeWindowID)) {
             builder.append(" (DrinkServed)");
         }
 

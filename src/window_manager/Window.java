@@ -14,9 +14,10 @@ public class Window {
         serviceTime = generateServiceTime();
     }
 
-    public void startService() {
+    public void startService(double federateTime) {
         isAvailable = false;
-        System.out.printf("Window [%d]: customer is sered", id);
+        serviceTime = federateTime + generateServiceTime();
+        System.out.printf("Window [%d]: customer is sered, expected end time at: %f", id, serviceTime);
     }
 
     public void endService(){
