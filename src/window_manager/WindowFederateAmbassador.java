@@ -166,50 +166,6 @@ public class WindowFederateAmbassador extends NullFederateAmbassador {
         log(builder.toString());
     }
 
-//    @Override
-//    public void reflectAttributeValues(ObjectInstanceHandle theObject,
-//                                       AttributeHandleValueMap theAttributes,
-//                                       byte[] tag,
-//                                       OrderType sentOrdering,
-//                                       TransportationTypeHandle theTransport,
-//                                       LogicalTime time,
-//                                       OrderType receivedOrdering,
-//                                       SupplementalReflectInfo reflectInfo)
-//            throws FederateInternalError {
-//        // Construct the initial log message
-//        String timeValue = time != null ? ", time=" + ((HLAfloat64Time) time).getValue() : "";
-//        StringBuilder message = new StringBuilder(String.format("Reflection for object: handle=%s, tag=%s%s, attributeCount=%d\n",
-//                theObject, new String(tag), timeValue, theAttributes.size()));
-//
-//        // Append details about each attribute
-//        for (AttributeHandle attributeHandle : theAttributes.keySet()) {
-//            String attributeName = " (Unknown)   "; // Default attribute name
-//            int attributeValue = 0; // Default attribute value
-//            HLAinteger32BE valueDecoder = new HLA1516eInteger32BE();
-//
-//            try {
-//                valueDecoder.decode(theAttributes.get(attributeHandle));
-//                attributeValue = valueDecoder.getValue();
-//
-//                if (attributeHandle.equals(federate.storageAvailableHandle)) {
-//                    attributeName = " (Available)    ";
-//                    federate.storageAvailable = attributeValue;
-//                } else if (attributeHandle.equals(federate.storageMaxHandle)) {
-//                    attributeName = " (Max)";
-//                    federate.storageMax = attributeValue;
-//                }
-//            } catch (DecoderException e) {
-//                e.printStackTrace();
-//            }
-//
-//            message.append(String.format("\tattributeHandle=%s%s, attributeValue=%d\n",
-//                    attributeHandle, attributeName, attributeValue));
-//        }
-//
-//        // Log the constructed message
-//        log(message.toString());
-//    }
-
     @Override
     public void receiveInteraction(InteractionClassHandle interactionClass,
                                    ParameterHandleValueMap theParameters,
@@ -239,30 +195,32 @@ public class WindowFederateAmbassador extends NullFederateAmbassador {
                                    OrderType receivedOrdering,
                                    SupplementalReceiveInfo receiveInfo)
             throws FederateInternalError {
-        StringBuilder builder = new StringBuilder("Interaction Received:");
+        String timeAsString = time != null ? String.valueOf(((HLAfloat64Time) time).getValue()) : "";
 
-        builder.append(" handle=" + interactionClass);
-        if (interactionClass.equals(federate.freeWindowID)) {
-            builder.append(" (DrinkServed)");
+        StringBuilder attributesMapAsString = new StringBuilder();
+
+        String interactionName = "";
+        if (interactionClass.equals(federate.moveCustomerToWindow)) {
+            interactionName = "(Customer)";
+
+            for (ParameterHandle parameter : theParameters.keySet()) {
+                // TUTJA SPRAWDZIC
+                byte[] bytes = theParameters.get(federate.freeWindowID);
+                HLAinteger32BE windowId = new HLA1516eInteger32BE();
+                try {
+                    windowId.decode(bytes);
+                } catch (DecoderException e) {
+                    e.printStackTrace();
+                }
+                int customerIdValue = windowId.getValue();
+                String paramValue = String.valueOf(customerIdValue);
+
+                attributesMapAsString.append(String.format("paramHandle=%s, paramValueInBytes=%s, paramValue=%s \n", parameter, theParameters.get(parameter).length, paramValue));
+            }
+
+            log(String.format("handle=%s, interactionName=%s, tag=%s, time=%s, attributesMapSize=%s, attributesMap=%s",
+                    interactionClass, interactionName, new String(tag), timeAsString, theParameters.size(), attributesMapAsString));
         }
-
-        builder.append(", tag=" + new String(tag));
-        if (time != null) {
-            builder.append(", time=" + ((HLAfloat64Time) time).getValue());
-        }
-
-        builder.append(", parameterCount=" + theParameters.size());
-        builder.append("\n");
-        for (ParameterHandle parameter : theParameters.keySet()) {
-            builder.append("\tparamHandle=");
-            builder.append(parameter);
-            builder.append(", paramValue=");
-            builder.append(theParameters.get(parameter).length);
-            builder.append(" bytes");
-            builder.append("\n");
-        }
-
-        log(builder.toString());
     }
 
     @Override
