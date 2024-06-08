@@ -1,8 +1,11 @@
 package logger_manager;
 
 import hla.rti1516e.*;
+import hla.rti1516e.encoding.DecoderException;
+import hla.rti1516e.encoding.HLAinteger32BE;
 import hla.rti1516e.exceptions.FederateInternalError;
 import hla.rti1516e.time.HLAfloat64Time;
+import org.portico.impl.hla1516e.types.encoding.HLA1516eInteger32BE;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 
@@ -143,7 +146,69 @@ public class LoggerFederateAmbassador extends NullFederateAmbassador {
                                    OrderType receivedOrdering,
                                    SupplementalReceiveInfo receiveInfo)
             throws FederateInternalError {
-        throw new NotImplementedException();
+        StringBuilder builder = new StringBuilder("Interaction Received:");
+        builder.append(" handle=").append(interactionClass);
+
+        if (interactionClass.equals(federate.addCustomer)) {
+            builder.append(" (AddCustomer)");
+        } else if (interactionClass.equals(federate.assignCustomerToQueue)) {
+            builder.append(" (AssignCustomerToQueue)");
+        } else if (interactionClass.equals(federate.currentQueueSize)) {
+            builder.append(" (CurrentQueueSize)");
+        } else if (interactionClass.equals(federate.customerChangeQueue)) {
+            builder.append(" (CustomerChangeQueue)");
+        } else if (interactionClass.equals(federate.moveCustomerToWindow)) {
+            builder.append(" (MoveCustomerToWindow)");
+        } else if (interactionClass.equals(federate.assignCustomerToWindow)) {
+            builder.append(" (AssignCustomerToWindow)");
+        }
+
+        builder.append(", tag=").append(new String(tag));
+
+        if (time != null) {
+            builder.append(", time=").append(((HLAfloat64Time) time).getValue());
+        }
+
+        builder.append(", parameterCount=").append(theParameters.size()).append("\n");
+
+        for (ParameterHandle parameter : theParameters.keySet()) {
+            builder.append("\tparamHandle=").append(parameter);
+            byte[] value = theParameters.get(parameter);
+            builder.append(", paramValue=").append(value.length).append(" bytes");
+
+            // Specific processing based on parameter handle
+            try {
+                if (parameter.equals(federate.addCustomerInteractionCustomerId) ||
+                        parameter.equals(federate.assignCustomerToQueueCustomerId) ||
+                        parameter.equals(federate.customerChangeQueueCustomerId) ||
+                        parameter.equals(federate.assignCustomerToWindowCustomerId)) {
+                    HLAinteger32BE id = new HLA1516eInteger32BE();
+                    id.decode(value);
+                    builder.append(" (Customer ID=").append(id.getValue()).append(")");
+                } else if (parameter.equals(federate.assignCustomerToQueueQueueId) ||
+                        parameter.equals(federate.currentQueueSizeQueueId) ||
+                        parameter.equals(federate.customerChangeQueueQueueId)) {
+                    HLAinteger32BE id = new HLA1516eInteger32BE();
+                    id.decode(value);
+                    builder.append(" (Queue ID=").append(id.getValue()).append(")");
+                } else if (parameter.equals(federate.moveCustomerToWindowWindowId) ||
+                        parameter.equals(federate.assignCustomerToWindowWindowId)) {
+                    HLAinteger32BE id = new HLA1516eInteger32BE();
+                    id.decode(value);
+                    builder.append(" (Window ID=").append(id.getValue()).append(")");
+                } else if (parameter.equals(federate.currentQueueSizeSize)) {
+                    HLAinteger32BE size = new HLA1516eInteger32BE();
+                    size.decode(value);
+                    builder.append(" (Queue Size=").append(size.getValue()).append(")");
+                }
+            } catch (DecoderException e) {
+                builder.append(" Error decoding parameter: ").append(e.getMessage());
+            }
+
+            builder.append("\n");
+        }
+
+        log(builder.toString());
     }
 
     @Override

@@ -2,7 +2,6 @@ package logger_manager;
 
 import hla.rti1516e.*;
 import hla.rti1516e.encoding.EncoderFactory;
-import hla.rti1516e.encoding.HLAinteger32BE;
 import hla.rti1516e.exceptions.FederatesCurrentlyJoined;
 import hla.rti1516e.exceptions.FederationExecutionAlreadyExists;
 import hla.rti1516e.exceptions.FederationExecutionDoesNotExist;
@@ -14,6 +13,7 @@ import hla.rti1516e.time.HLAfloat64TimeFactory;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URL;
 
@@ -29,14 +29,18 @@ public class LoggerFederate {
     protected ParameterHandle addCustomerInteractionCustomerId;
     protected InteractionClassHandle assignCustomerToQueue;
     protected ParameterHandle assignCustomerToQueueCustomerId;
+    protected ParameterHandle assignCustomerToQueueQueueId;
     protected InteractionClassHandle currentQueueSize;
-    protected ParameterHandle countHandle;
+    protected ParameterHandle currentQueueSizeQueueId;
+    protected ParameterHandle currentQueueSizeSize;
     protected InteractionClassHandle customerChangeQueue;
-    protected ParameterHandle countHandle;
+    protected ParameterHandle customerChangeQueueCustomerId;
+    protected ParameterHandle customerChangeQueueQueueId;
     protected InteractionClassHandle moveCustomerToWindow;
-    protected ParameterHandle countHandle;
+    protected ParameterHandle moveCustomerToWindowWindowId;
     protected InteractionClassHandle assignCustomerToWindow;
-    protected ParameterHandle countHandle;
+    protected ParameterHandle assignCustomerToWindowCustomerId;
+    protected ParameterHandle assignCustomerToWindowWindowId;
 
 
     private void log(String message) {
@@ -110,23 +114,8 @@ public class LoggerFederate {
         publishAndSubscribe();
         log("Published and Subscribed");
 
-        Logger logger = new Logger();
         while (fedamb.isRunning) {
-            int producedCustomerId = logger.produce();
-            ParameterHandleValueMap parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(1);
-            ParameterHandle addCustomerIdHandle = rtiamb.getParameterHandle(addProductsHandle, "customerId");
-            HLAinteger32BE count = encoderFactory.createHLAinteger32BE(producedCustomerId);
-            parameterHandleValueMap.put(addCustomerIdHandle, count.toByteArray());
-            rtiamb.sendInteraction(addProductsHandle, parameterHandleValueMap, generateTag());
-
-            // subscribe for GetProducts interaction
-            String iname = "HLAinteractionRoot.ProductsManagment.AddProducts";
-            getProductsHandle = rtiamb.getInteractionClassHandle( iname );
-            countHandle = rtiamb.getParameterHandle(rtiamb.getInteractionClassHandle( "HLAinteractionRoot.ProductsManagment" ), "count");
-            rtiamb.subscribeInteractionClass(getProductsHandle);
-
-            advanceTime(logger.getTimeToNext());
-            log("Time Advanced to " + fedamb.federateTime);
+            advanceTime(1.0);
         }
 
         rtiamb.resignFederationExecution(ResignAction.DELETE_OBJECTS);
@@ -155,9 +144,55 @@ public class LoggerFederate {
     }
 
     private void publishAndSubscribe() throws RTIexception {
-        String iname = "HLAinteractionRoot.addCustomer";
-        addProductsHandle = rtiamb.getInteractionClassHandle(iname);
-        rtiamb.publishInteractionClass(addProductsHandle);
+        this.addCustomer = injectSubscribeInteraction("HLAinteractionRoot.addCustomer",
+                "addCustomerInteractionCustomerId", null,
+                "customerId", null);
+
+        this.assignCustomerToQueue = injectSubscribeInteraction("HLAinteractionRoot.assignCustomerToQueue",
+                "assignCustomerToQueueCustomerId", "assignCustomerToQueueQueueId",
+                "customerId", "queueId");
+
+        this.currentQueueSize = injectSubscribeInteraction("HLAinteractionRoot.currentQueueSize",
+                "currentQueueSizeQueueId", "currentQueueSizeSize",
+                "queueId", "size");
+
+        this.customerChangeQueue = injectSubscribeInteraction("HLAinteractionRoot.customerChangeQueue",
+                "customerChangeQueueCustomerId", "customerChangeQueueQueueId", "customerId", "queueId");
+
+        this.moveCustomerToWindow = injectSubscribeInteraction("HLAinteractionRoot.moveCustomerToWindow",
+                "moveCustomerToWindowWindowId", null,
+                "windowId", null);
+
+        this.assignCustomerToWindow = injectSubscribeInteraction("HLAinteractionRoot.assignCustomerToWindow",
+                "assignCustomerToWindowCustomerId", "assignCustomerToWindowWindowId",
+                "customerId", "windowId");
+    }
+
+    private InteractionClassHandle injectSubscribeInteraction(String iname,
+                                            String  paramName1, String  paramName2,
+                                            String paramNameValue1, String paramNameValue2) throws RTIexception {
+        InteractionClassHandle interactionClass = rtiamb.getInteractionClassHandle(iname);
+        if (paramNameValue1 != null) {
+            setProperty(paramName1, rtiamb.getParameterHandle(rtiamb.getInteractionClassHandle(iname), paramNameValue1));
+        }
+        if (paramNameValue2 != null) {
+            setProperty(paramName2, rtiamb.getParameterHandle(rtiamb.getInteractionClassHandle(iname), paramNameValue2));
+        }
+        rtiamb.subscribeInteractionClass(interactionClass);
+        return interactionClass;
+    }
+
+    private void setProperty(String fieldName, Object value) {
+        try {
+            Class<?> clazz = getClass();
+            Field field = clazz.getDeclaredField(fieldName);
+            field.setAccessible(true);
+            field.set(this, value);
+        } catch (NoSuchFieldException e) {
+            System.out.println("Nie znaleziono pola: " + e.getMessage());
+        } catch (IllegalAccessException e) {
+            System.out.println("Brak dostępu do pola: " + e.getMessage());
+        }
     }
 
     private void advanceTime(double timestep) throws RTIexception {
