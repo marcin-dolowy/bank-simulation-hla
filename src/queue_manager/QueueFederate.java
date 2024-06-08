@@ -16,8 +16,8 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.PriorityQueue;
+import java.util.Random;
 
 
 public class QueueFederate {
@@ -41,19 +41,18 @@ public class QueueFederate {
     protected InteractionClassHandle getAssignCustomerToQueue;
     protected InteractionClassHandle getAddCustomer;
     protected InteractionClassHandle getFreeWindow;
-    private List<Queue> queues;
+    private Queue queue0 = new Queue(0);
+    private Queue queue1 = new Queue(1);
+    protected java.util.Queue<Integer> customersWaitingToAddToQueue = new PriorityQueue<>();
+    private double changeQueueTime = 3;
+    protected boolean window0IsWaitingForCustomer;
+    protected boolean window1IsWaitingForCustomer;
 
     protected ParameterHandle customerIdHandle;
     protected ParameterHandle windowIdHandle;
 
     protected int storageMax = 0;
     protected int storageAvailable = 0;
-
-    public QueueFederate() {
-        queues = new ArrayList<>();
-        queues.add(new Queue(1));
-        queues.add(new Queue(2));
-    }
 
     private void log(String message) {
         System.out.println("ConsumerFederate   : " + message);
@@ -175,20 +174,123 @@ public class QueueFederate {
         /////////////////////////////////////
         // 10. do the main simulation loop //
         /////////////////////////////////////
+
+        Random rand = new Random();
         while (fedamb.isRunning) {
-            int consumed = queue.consume();
-            if (storageAvailable - consumed >= 0) {
-                ParameterHandleValueMap parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(1);
-                ParameterHandle addProductsCountHandle = rtiamb.getParameterHandle(getProductsHandle, "count");
-                HLAinteger32BE count = encoderFactory.createHLAinteger32BE(consumed);
-                parameterHandleValueMap.put(addProductsCountHandle, count.toByteArray());
-                rtiamb.sendInteraction(getProductsHandle, parameterHandleValueMap, generateTag());
+            //send current queue0 size
+            ParameterHandleValueMap parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(2);
+            ParameterHandle getCurrentQueueSizeHandleQueue0Id = rtiamb.getParameterHandle(getCurrentQueueSize, "queueId");
+            ParameterHandle getCurrentQueueSizeHandleQueue0Size = rtiamb.getParameterHandle(getCurrentQueueSize, "size");
+            HLAinteger32BE queue0Id = encoderFactory.createHLAinteger32BE(queue0.getId());
+            HLAinteger32BE queue0Size = encoderFactory.createHLAinteger32BE(queue0.getQueue().size());
+            parameterHandleValueMap.put(getCurrentQueueSizeHandleQueue0Id, queue0Id.toByteArray());
+            parameterHandleValueMap.put(getCurrentQueueSizeHandleQueue0Size, queue0Size.toByteArray());
+            rtiamb.sendInteraction(getCurrentQueueSize, parameterHandleValueMap, generateTag());
+            //send current queue1 size
+            parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(2);
+            ParameterHandle getCurrentQueueSizeHandleQueue1Id = rtiamb.getParameterHandle(getCurrentQueueSize, "queueId");
+            ParameterHandle getCurrentQueueSizeHandleQueue1Size = rtiamb.getParameterHandle(getCurrentQueueSize, "size");
+            HLAinteger32BE queue1Id = encoderFactory.createHLAinteger32BE(queue1.getId());
+            HLAinteger32BE queue1Size = encoderFactory.createHLAinteger32BE(queue1.getQueue().size());
+            parameterHandleValueMap.put(getCurrentQueueSizeHandleQueue1Id, queue1Id.toByteArray());
+            parameterHandleValueMap.put(getCurrentQueueSizeHandleQueue1Size, queue1Size.toByteArray());
+            rtiamb.sendInteraction(getCurrentQueueSize, parameterHandleValueMap, generateTag());
+
+            //assign customer to q0 or q1
+            int cid = customersWaitingToAddToQueue.poll();
+            int randomQueueIdNumber = rand.nextInt(2);
+            if (randomQueueIdNumber == 0) {
+                queue0.getQueue().add(cid);
+
+                parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(2);
+                ParameterHandle getAssignCustomerToQueueHandleQueue0Id = rtiamb.getParameterHandle(getAssignCustomerToQueue, "customerId");
+                ParameterHandle getAssignCustomerToQueueHandleQueue0Size = rtiamb.getParameterHandle(getAssignCustomerToQueue, "queueId");
+                HLAinteger32BE customerId = encoderFactory.createHLAinteger32BE(cid);
+                queue0Id = encoderFactory.createHLAinteger32BE(queue0.getId());
+                parameterHandleValueMap.put(getAssignCustomerToQueueHandleQueue0Id, customerId.toByteArray());
+                parameterHandleValueMap.put(getAssignCustomerToQueueHandleQueue0Size, queue0Id.toByteArray());
+                rtiamb.sendInteraction(getAssignCustomerToQueue, parameterHandleValueMap, generateTag());
+
             } else {
-                log("Consuming canceled because of lack of products.");
+                queue1.getQueue().add(cid);
+
+                parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(2);
+                ParameterHandle getAssignCustomerToQueueHandleQueue1Id = rtiamb.getParameterHandle(getAssignCustomerToQueue, "customerId");
+                ParameterHandle getAssignCustomerToQueueHandleQueue1Size = rtiamb.getParameterHandle(getAssignCustomerToQueue, "queueId");
+                HLAinteger32BE customerId = encoderFactory.createHLAinteger32BE(cid);
+                queue1Id = encoderFactory.createHLAinteger32BE(queue1.getId());
+                parameterHandleValueMap.put(getAssignCustomerToQueueHandleQueue1Id, customerId.toByteArray());
+                parameterHandleValueMap.put(getAssignCustomerToQueueHandleQueue1Size, queue1Id.toByteArray());
+                rtiamb.sendInteraction(getAssignCustomerToQueue, parameterHandleValueMap, generateTag());
             }
-            // 9.3 request a time advance and wait until we get it
-            advanceTime(queue.getTimeToNext());
-            log("Time Advanced to " + fedamb.federateTime);
+
+            if (!queue0.getQueue().isEmpty() || !queue1.getQueue().isEmpty()) {
+                //change customer in queue
+                if (fedamb.federateTime == changeQueueTime) {
+                    randomQueueIdNumber = rand.nextInt(2);
+
+                    if (randomQueueIdNumber == 0) {
+                        int randomCustomerIdNumber = rand.nextInt(queue0.getQueue().size());
+                        int customerId = queue0.getQueue().get(randomQueueIdNumber);
+
+                        if (randomCustomerIdNumber > queue1.getQueue().size()) {
+                            queue0.getQueue().remove(customerId);
+                            queue1.getQueue().add(customerId);
+
+                            parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(2);
+                            ParameterHandle getCustomerChangeQueueHandleCustomerId = rtiamb.getParameterHandle(getCustomerChangeQueue, "customerId");
+                            ParameterHandle getCustomerChangeQueueHandleQueueId = rtiamb.getParameterHandle(getCustomerChangeQueue, "queueId");
+                            HLAinteger32BE cusId = encoderFactory.createHLAinteger32BE(customerId);
+                            HLAinteger32BE queueId = encoderFactory.createHLAinteger32BE(queue0.getId());
+                            parameterHandleValueMap.put(getCustomerChangeQueueHandleCustomerId, cusId.toByteArray());
+                            parameterHandleValueMap.put(getCustomerChangeQueueHandleQueueId, queueId.toByteArray());
+                            rtiamb.sendInteraction(getCustomerChangeQueue, parameterHandleValueMap, generateTag());
+                        }
+
+                    } else {
+                        int randomCustomerIdNumber = rand.nextInt(queue1.getQueue().size());
+                        int customerId = queue1.getQueue().get(randomQueueIdNumber);
+
+                        if (randomCustomerIdNumber > queue0.getQueue().size()) {
+                            queue1.getQueue().remove(customerId);
+                            queue0.getQueue().add(customerId);
+
+                            parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(2);
+                            ParameterHandle getCustomerChangeQueueHandleCustomerId = rtiamb.getParameterHandle(getCustomerChangeQueue, "customerId");
+                            ParameterHandle getCustomerChangeQueueHandleQueueId = rtiamb.getParameterHandle(getCustomerChangeQueue, "queueId");
+                            HLAinteger32BE cusId = encoderFactory.createHLAinteger32BE(customerId);
+                            HLAinteger32BE queueId = encoderFactory.createHLAinteger32BE(queue1.getId());
+                            parameterHandleValueMap.put(getCustomerChangeQueueHandleCustomerId, cusId.toByteArray());
+                            parameterHandleValueMap.put(getCustomerChangeQueueHandleQueueId, queueId.toByteArray());
+                            rtiamb.sendInteraction(getCustomerChangeQueue, parameterHandleValueMap, generateTag());
+                        }
+                    }
+
+                    int min = (int) fedamb.federateTime;
+                    int max = (int) (fedamb.federateTime + 5.0);
+                    changeQueueTime = rand.nextInt(max - min + 1) + min;
+                }
+            }
+
+            if (window0IsWaitingForCustomer) {
+                queue0.getQueue().remove(0);
+                parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(1);
+                ParameterHandle getMoveCustomerToWindowHandle = rtiamb.getParameterHandle(getMoveCustomerToWindow, "windowId");
+                HLAinteger32BE windowId = encoderFactory.createHLAinteger32BE(0);
+                parameterHandleValueMap.put(getMoveCustomerToWindowHandle, windowId.toByteArray());
+                rtiamb.sendInteraction(getMoveCustomerToWindow, parameterHandleValueMap, generateTag());
+                window0IsWaitingForCustomer = false;
+            }
+
+            if (window1IsWaitingForCustomer) {
+                queue1.getQueue().remove(0);
+                parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(1);
+                ParameterHandle getMoveCustomerToWindowHandle = rtiamb.getParameterHandle(getMoveCustomerToWindow, "windowId");
+                HLAinteger32BE windowId = encoderFactory.createHLAinteger32BE(1);
+                parameterHandleValueMap.put(getMoveCustomerToWindowHandle, windowId.toByteArray());
+                rtiamb.sendInteraction(getMoveCustomerToWindow, parameterHandleValueMap, generateTag());
+                window1IsWaitingForCustomer = false;
+            }
         }
 
 
@@ -196,6 +298,7 @@ public class QueueFederate {
         // 12. resign from the federation //
         ////////////////////////////////////
         rtiamb.resignFederationExecution(ResignAction.DELETE_OBJECTS);
+
         log("Resigned from Federation");
 
         ////////////////////////////////////////
@@ -206,16 +309,19 @@ public class QueueFederate {
         try {
             rtiamb.destroyFederationExecution("ExampleFederation");
             log("Destroyed Federation");
-        } catch (FederationExecutionDoesNotExist dne) {
+        } catch (
+                FederationExecutionDoesNotExist dne) {
             log("No need to destroy federation, it doesn't exist");
-        } catch (FederatesCurrentlyJoined fcj) {
+        } catch (
+                FederatesCurrentlyJoined fcj) {
             log("Didn't destroy federation, federates still joined");
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////// Helper Methods //////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////// Helper Methods //////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 
     /**
      * This method will attempt to enable the various time related properties for
@@ -275,7 +381,7 @@ public class QueueFederate {
         rtiamb.publishInteractionClass(getAssignCustomerToQueue);
 
         customerIdHandle = rtiamb.getParameterHandle(rtiamb.getInteractionClassHandle("HLAinteractionRoot.addCustomer"), "customerId");
-        windowIdHandle = rtiamb.getParameterHandle(rtiamb.getInteractionClassHandle("HLAinteractionRoot.freeWindow"), "windowIdHandle");
+        windowIdHandle = rtiamb.getParameterHandle(rtiamb.getInteractionClassHandle("HLAinteractionRoot.freeWindow"), "windowId");
     }
 
     /**
@@ -317,7 +423,11 @@ public class QueueFederate {
         }
     }
 
-    public List<Queue> getQueues() {
-        return queues;
+    public Queue getQueue0() {
+        return queue0;
+    }
+
+    public Queue getQueue1() {
+        return queue1;
     }
 }

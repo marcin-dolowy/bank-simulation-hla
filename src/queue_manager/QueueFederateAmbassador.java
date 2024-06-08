@@ -232,11 +232,7 @@ public class QueueFederateAmbassador extends NullFederateAmbassador {
                 int customerIdValue = customerId.getValue();
                 String paramValue = String.valueOf(customerIdValue);
 
-                if (federate.getQueues().get(0).getQueue().size() > federate.getQueues().get(1).getQueue().size()) {
-                    federate.getQueues().get(1).getQueue().add(customerIdValue);
-                } else if (federate.getQueues().get(0).getQueue().size() < federate.getQueues().get(1).getQueue().size()) {
-                    federate.getQueues().get(0).getQueue().add(customerIdValue);
-                }
+                federate.customersWaitingToAddToQueue.add(customerIdValue);
 
                 attributesMapAsString.append(String.format("paramHandle=%s, paramValueInBytes=%s, paramValue=%s \n", parameter, theParameters.get(parameter).length, paramValue));
             }
@@ -259,10 +255,10 @@ public class QueueFederateAmbassador extends NullFederateAmbassador {
                 int windowIdValue = windowId.getValue();
                 String paramValue = String.valueOf(windowIdValue);
 
-                if (federate.getQueues().get(0).getQueue().size() > federate.getQueues().get(1).getQueue().size()) {
-                    federate.getQueues().get(1).getQueue().add(customerIdValue);
-                } else if (federate.getQueues().get(0).getQueue().size() < federate.getQueues().get(1).getQueue().size()) {
-                    federate.getQueues().get(0).getQueue().add(customerIdValue);
+                if (windowIdValue == 0) {
+                    federate.window0IsWaitingForCustomer = true;
+                } else if (windowIdValue == 1) {
+                    federate.window1IsWaitingForCustomer = true;
                 }
 
                 attributesMapAsString.append(String.format("paramHandle=%s, paramValueInBytes=%s, paramValue=%s \n", parameter, theParameters.get(parameter).length, paramValue));
