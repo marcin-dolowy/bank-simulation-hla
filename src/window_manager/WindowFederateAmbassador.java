@@ -1,44 +1,17 @@
-/*
- *   Copyright 2012 The Portico Project
- *
- *   This file is part of portico.
- *
- *   portico is free software; you can redistribute it and/or modify
- *   it under the terms of the Common Developer and Distribution License (CDDL)
- *   as published by Sun Microsystems. For more information see the LICENSE file.
- *
- *   Use of this software is strictly AT YOUR OWN RISK!!!
- *   If something bad happens you do not have permission to come crying to me.
- *   (that goes for your lawyer as well)
- *
- */
-package Consumer;
+package window_manager;
 
 import Producer.ProducerFederate;
 import hla.rti1516e.*;
 import hla.rti1516e.encoding.DecoderException;
-import hla.rti1516e.encoding.HLAinteger16BE;
 import hla.rti1516e.encoding.HLAinteger32BE;
 import hla.rti1516e.exceptions.FederateInternalError;
 import hla.rti1516e.time.HLAfloat64Time;
 import org.portico.impl.hla1516e.types.encoding.HLA1516eInteger32BE;
 
-/**
- * This class handles all incoming callbacks from the RTI regarding a particular
- * {@link ProducerFederate}. It will log information about any callbacks it
- * receives, thus demonstrating how to deal with the provided callback information.
- */
-public class ConsumerFederateAmbassador extends NullFederateAmbassador {
-    //----------------------------------------------------------
-    //                    STATIC VARIABLES
-    //----------------------------------------------------------
+public class WindowFederateAmbassador extends NullFederateAmbassador {
 
-    //----------------------------------------------------------
-    //                   INSTANCE VARIABLES
-    //----------------------------------------------------------
-    private ConsumerFederate federate;
+    private WindowFederate federate;
 
-    // these variables are accessible in the package
     protected double federateTime = 0.0;
     protected double federateLookahead = 1.0;
 
@@ -52,24 +25,17 @@ public class ConsumerFederateAmbassador extends NullFederateAmbassador {
 
     protected boolean isRunning = true;
 
-    //----------------------------------------------------------
-    //                      CONSTRUCTORS
-    //----------------------------------------------------------
 
-    public ConsumerFederateAmbassador(ConsumerFederate federate) {
+    public WindowFederateAmbassador(WindowFederate federate) {
         this.federate = federate;
     }
 
-    //----------------------------------------------------------
-    //                    INSTANCE METHODS
-    //----------------------------------------------------------
+
     private void log(String message) {
         System.out.println("FederateAmbassador: " + message);
     }
 
-    //////////////////////////////////////////////////////////////////////////
-    ////////////////////////// RTI Callback Methods //////////////////////////
-    //////////////////////////////////////////////////////////////////////////
+
     @Override
     public void synchronizationPointRegistrationFailed(String label,
                                                        SynchronizationPointFailureReason reason) {
@@ -95,9 +61,7 @@ public class ConsumerFederateAmbassador extends NullFederateAmbassador {
             this.isReadyToRun = true;
     }
 
-    /**
-     * The RTI has informed us that time regulation is now enabled.
-     */
+
     @Override
     public void timeRegulationEnabled(LogicalTime time) {
         this.federateTime = ((HLAfloat64Time) time).getValue();
@@ -133,9 +97,7 @@ public class ConsumerFederateAmbassador extends NullFederateAmbassador {
                                        TransportationTypeHandle transport,
                                        SupplementalReflectInfo reflectInfo)
             throws FederateInternalError {
-        // just pass it on to the other method for printing purposes
-        // passing null as the time will let the other method know it
-        // it from us, not from the RTI
+
         reflectAttributeValues(theObject,
                 theAttributes,
                 tag,
@@ -158,24 +120,17 @@ public class ConsumerFederateAmbassador extends NullFederateAmbassador {
             throws FederateInternalError {
         StringBuilder builder = new StringBuilder("Reflection for object:");
 
-        // print the handle
         builder.append(" handle=" + theObject);
-        // print the tag
         builder.append(", tag=" + new String(tag));
-        // print the time (if we have it) we'll get null if we are just receiving
-        // a forwarded call from the other reflect callback above
         if (time != null) {
             builder.append(", time=" + ((HLAfloat64Time) time).getValue());
         }
 
-        // print the attribute information
         builder.append(", attributeCount=" + theAttributes.size());
         builder.append("\n");
         for (AttributeHandle attributeHandle : theAttributes.keySet()) {
-            // print the attibute handle
             builder.append("\tattributeHandle=");
 
-            // if we're dealing with Flavor, decode into the appropriate enum value
             if (attributeHandle.equals(federate.storageAvailableHandle)) {
                 builder.append(attributeHandle);
                 builder.append(" (Available)    ");
@@ -211,6 +166,50 @@ public class ConsumerFederateAmbassador extends NullFederateAmbassador {
         log(builder.toString());
     }
 
+//    @Override
+//    public void reflectAttributeValues(ObjectInstanceHandle theObject,
+//                                       AttributeHandleValueMap theAttributes,
+//                                       byte[] tag,
+//                                       OrderType sentOrdering,
+//                                       TransportationTypeHandle theTransport,
+//                                       LogicalTime time,
+//                                       OrderType receivedOrdering,
+//                                       SupplementalReflectInfo reflectInfo)
+//            throws FederateInternalError {
+//        // Construct the initial log message
+//        String timeValue = time != null ? ", time=" + ((HLAfloat64Time) time).getValue() : "";
+//        StringBuilder message = new StringBuilder(String.format("Reflection for object: handle=%s, tag=%s%s, attributeCount=%d\n",
+//                theObject, new String(tag), timeValue, theAttributes.size()));
+//
+//        // Append details about each attribute
+//        for (AttributeHandle attributeHandle : theAttributes.keySet()) {
+//            String attributeName = " (Unknown)   "; // Default attribute name
+//            int attributeValue = 0; // Default attribute value
+//            HLAinteger32BE valueDecoder = new HLA1516eInteger32BE();
+//
+//            try {
+//                valueDecoder.decode(theAttributes.get(attributeHandle));
+//                attributeValue = valueDecoder.getValue();
+//
+//                if (attributeHandle.equals(federate.storageAvailableHandle)) {
+//                    attributeName = " (Available)    ";
+//                    federate.storageAvailable = attributeValue;
+//                } else if (attributeHandle.equals(federate.storageMaxHandle)) {
+//                    attributeName = " (Max)";
+//                    federate.storageMax = attributeValue;
+//                }
+//            } catch (DecoderException e) {
+//                e.printStackTrace();
+//            }
+//
+//            message.append(String.format("\tattributeHandle=%s%s, attributeValue=%d\n",
+//                    attributeHandle, attributeName, attributeValue));
+//        }
+//
+//        // Log the constructed message
+//        log(message.toString());
+//    }
+
     @Override
     public void receiveInteraction(InteractionClassHandle interactionClass,
                                    ParameterHandleValueMap theParameters,
@@ -219,9 +218,7 @@ public class ConsumerFederateAmbassador extends NullFederateAmbassador {
                                    TransportationTypeHandle theTransport,
                                    SupplementalReceiveInfo receiveInfo)
             throws FederateInternalError {
-        // just pass it on to the other method for printing purposes
-        // passing null as the time will let the other method know it
-        // it from us, not from the RTI
+
         this.receiveInteraction(interactionClass,
                 theParameters,
                 tag,
@@ -244,28 +241,21 @@ public class ConsumerFederateAmbassador extends NullFederateAmbassador {
             throws FederateInternalError {
         StringBuilder builder = new StringBuilder("Interaction Received:");
 
-        // print the handle
         builder.append(" handle=" + interactionClass);
         if (interactionClass.equals(federate.getProductsHandle)) {
             builder.append(" (DrinkServed)");
         }
 
-        // print the tag
         builder.append(", tag=" + new String(tag));
-        // print the time (if we have it) we'll get null if we are just receiving
-        // a forwarded call from the other reflect callback above
         if (time != null) {
             builder.append(", time=" + ((HLAfloat64Time) time).getValue());
         }
 
-        // print the parameer information
         builder.append(", parameterCount=" + theParameters.size());
         builder.append("\n");
         for (ParameterHandle parameter : theParameters.keySet()) {
-            // print the parameter handle
             builder.append("\tparamHandle=");
             builder.append(parameter);
-            // print the parameter value
             builder.append(", paramValue=");
             builder.append(theParameters.get(parameter).length);
             builder.append(" bytes");
@@ -284,7 +274,4 @@ public class ConsumerFederateAmbassador extends NullFederateAmbassador {
         log("Object Removed: handle=" + theObject);
     }
 
-    //----------------------------------------------------------
-    //                     STATIC METHODS
-    //----------------------------------------------------------
 }

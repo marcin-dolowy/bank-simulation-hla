@@ -1,4 +1,4 @@
-package customer_producer_manager;
+package window_manager;
 
 import hla.rti1516e.*;
 import hla.rti1516e.encoding.EncoderFactory;
@@ -17,21 +17,34 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-public class ProducerFederate {
+public class WindowFederate {
     public static final String READY_TO_RUN = "ReadyToRun";
-    
     private RTIambassador rtiamb;
-    private ProducerFederateAmbassador fedamb;  // created when we connect
-    private HLAfloat64TimeFactory timeFactory; // set when we join
-    protected EncoderFactory encoderFactory;     // set when we join
+    private WindowFederateAmbassador fedamb;
+    private HLAfloat64TimeFactory timeFactory;
+    protected EncoderFactory encoderFactory;
 
-    protected InteractionClassHandle addProductsHandle;
-    
+    protected ObjectClassHandle storageHandle;
+    protected AttributeHandle storageMaxHandle;
+    protected AttributeHandle storageAvailableHandle;
+    protected InteractionClassHandle getProductsHandle;
+
+    protected int storageMax = 0;
+    protected int storageAvailable = 0;
+
+    private Window window1;
+    private Window window2;
+
+    public WindowFederate() {
+        window1 = new Window(1);
+        window2 = new Window(2);
+    }
 
     private void log(String message) {
-        System.out.println("ProducerFederate   : " + message);
+        System.out.println("WindowFederate   : " + message);
     }
-    
+
+
     private void waitForUser() {
         log(" >>>>>>>>>> Press Enter to Continue <<<<<<<<<<");
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
@@ -48,9 +61,8 @@ public class ProducerFederate {
         rtiamb = RtiFactoryFactory.getRtiFactory().getRtiAmbassador();
         encoderFactory = RtiFactoryFactory.getRtiFactory().getEncoderFactory();
 
-        // connect
         log("Connecting...");
-        fedamb = new ProducerFederateAmbassador(this);
+        fedamb = new WindowFederateAmbassador(this);
         rtiamb.connect(fedamb, CallbackModel.HLA_EVOKED);
 
         log("Creating Federation...");
@@ -69,18 +81,17 @@ public class ProducerFederate {
             return;
         }
 
-        rtiamb.joinFederationExecution(federateName,            // name for the federate
-                "producer",   // federate type
-                "BankSimulationFederation"     // name of federation
+        rtiamb.joinFederationExecution(federateName,
+                "window",
+                "BankSimulationFederation"
         );
 
         log("Joined Federation as " + federateName);
 
-        // cache the time factory for easy access
         this.timeFactory = (HLAfloat64TimeFactory) rtiamb.getTimeFactory();
 
         rtiamb.registerFederationSynchronizationPoint(READY_TO_RUN, null);
-        // wait until the point is announced
+
         while (fedamb.isAnnounced == false) {
             rtiamb.evokeMultipleCallbacks(0.1, 0.2);
         }
@@ -96,24 +107,30 @@ public class ProducerFederate {
         enableTimePolicy();
         log("Time Policy Enabled");
 
+
         publishAndSubscribe();
         log("Published and Subscribed");
 
-        Producer producer = new Producer();
         while (fedamb.isRunning) {
-            int producedCustomerId = producer.produce();
-            ParameterHandleValueMap parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(1);
-            ParameterHandle addCustomerIdHandle = rtiamb.getParameterHandle(addProductsHandle, "customerId");
-            HLAinteger32BE count = encoderFactory.createHLAinteger32BE(producedCustomerId);
-            parameterHandleValueMap.put(addCustomerIdHandle, count.toByteArray());
-            rtiamb.sendInteraction(addProductsHandle, parameterHandleValueMap, generateTag());
+            int consumed = (int) window1.getServiceTime();
+            if (storageAvailable - consumed >= 0) {
+                ParameterHandleValueMap parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(1);
+                ParameterHandle addProductsCountHandle = rtiamb.getParameterHandle(getProductsHandle, "count");
+                HLAinteger32BE count = encoderFactory.createHLAinteger32BE(consumed);
+                parameterHandleValueMap.put(addProductsCountHandle, count.toByteArray());
+                rtiamb.sendInteraction(getProductsHandle, parameterHandleValueMap, generateTag());
+            } else {
+                log("Consuming canceled because of lack of products.");
+            }
 
-            advanceTime(producer.getTimeToNext());
+            advanceTime(window.getTimeToNext());
             log("Time Advanced to " + fedamb.federateTime);
         }
 
+
         rtiamb.resignFederationExecution(ResignAction.DELETE_OBJECTS);
         log("Resigned from Federation");
+
 
         try {
             rtiamb.destroyFederationExecution("ExampleFederation");
@@ -126,30 +143,53 @@ public class ProducerFederate {
     }
 
     private void enableTimePolicy() throws Exception {
+
         HLAfloat64Interval lookahead = timeFactory.makeInterval(fedamb.federateLookahead);
+
         this.rtiamb.enableTimeRegulation(lookahead);
+
         while (fedamb.isRegulating == false) {
             rtiamb.evokeMultipleCallbacks(0.1, 0.2);
         }
+
         this.rtiamb.enableTimeConstrained();
+
         while (fedamb.isConstrained == false) {
             rtiamb.evokeMultipleCallbacks(0.1, 0.2);
         }
     }
 
     private void publishAndSubscribe() throws RTIexception {
-        String iname = "HLAinteractionRoot.addCustomer";
-        addProductsHandle = rtiamb.getInteractionClassHandle(iname);
-        rtiamb.publishInteractionClass(addProductsHandle);
+
+        this.storageHandle = rtiamb.getObjectClassHandle("HLAobjectRoot.ProductStorage");
+        this.storageMaxHandle = rtiamb.getAttributeHandle(storageHandle, "max");
+        this.storageAvailableHandle = rtiamb.getAttributeHandle(storageHandle, "available");
+
+        AttributeHandleSet attributes = rtiamb.getAttributeHandleSetFactory().create();
+        attributes.add(storageMaxHandle);
+        attributes.add(storageAvailableHandle);
+        rtiamb.subscribeObjectClassAttributes(storageHandle, attributes);
+
+
+        String iname = "HLAinteractionRoot.ProductsManagment.GetProducts";
+        getProductsHandle = rtiamb.getInteractionClassHandle(iname);
+
+        rtiamb.publishInteractionClass(getProductsHandle);
     }
 
     private void advanceTime(double timestep) throws RTIexception {
+
         fedamb.isAdvancing = true;
         HLAfloat64Time time = timeFactory.makeTime(fedamb.federateTime + timestep);
         rtiamb.timeAdvanceRequest(time);
+
         while (fedamb.isAdvancing) {
             rtiamb.evokeMultipleCallbacks(0.1, 0.2);
         }
+    }
+
+    private short getTimeAsShort() {
+        return (short) fedamb.federateTime;
     }
 
     private byte[] generateTag() {
@@ -157,13 +197,17 @@ public class ProducerFederate {
     }
 
     public static void main(String[] args) {
-        String federateName = "CustomerProducer";
+
+        String federateName = "Window";
         if (args.length != 0) {
             federateName = args[0];
         }
+
         try {
-            new ProducerFederate().runFederate(federateName);
+
+            new WindowFederate().runFederate(federateName);
         } catch (Exception rtie) {
+
             rtie.printStackTrace();
         }
     }

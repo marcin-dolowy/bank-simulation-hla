@@ -1,23 +1,8 @@
-/*
- *   Copyright 2012 The Portico Project
- *
- *   This file is part of portico.
- *
- *   portico is free software; you can redistribute it and/or modify
- *   it under the terms of the Common Developer and Distribution License (CDDL)
- *   as published by Sun Microsystems. For more information see the LICENSE file.
- *
- *   Use of this software is strictly AT YOUR OWN RISK!!!
- *   If something bad happens you do not have permission to come crying to me.
- *   (that goes for your lawyer as well)
- *
- */
-package Consumer;
+package queue_manager;
 
 import Producer.ProducerFederate;
 import hla.rti1516e.*;
 import hla.rti1516e.encoding.DecoderException;
-import hla.rti1516e.encoding.HLAinteger16BE;
 import hla.rti1516e.encoding.HLAinteger32BE;
 import hla.rti1516e.exceptions.FederateInternalError;
 import hla.rti1516e.time.HLAfloat64Time;
@@ -28,15 +13,8 @@ import org.portico.impl.hla1516e.types.encoding.HLA1516eInteger32BE;
  * {@link ProducerFederate}. It will log information about any callbacks it
  * receives, thus demonstrating how to deal with the provided callback information.
  */
-public class ConsumerFederateAmbassador extends NullFederateAmbassador {
-    //----------------------------------------------------------
-    //                    STATIC VARIABLES
-    //----------------------------------------------------------
-
-    //----------------------------------------------------------
-    //                   INSTANCE VARIABLES
-    //----------------------------------------------------------
-    private ConsumerFederate federate;
+public class QueueFederateAmbassador extends NullFederateAmbassador {
+    private QueueFederate federate;
 
     // these variables are accessible in the package
     protected double federateTime = 0.0;
@@ -52,17 +30,10 @@ public class ConsumerFederateAmbassador extends NullFederateAmbassador {
 
     protected boolean isRunning = true;
 
-    //----------------------------------------------------------
-    //                      CONSTRUCTORS
-    //----------------------------------------------------------
-
-    public ConsumerFederateAmbassador(ConsumerFederate federate) {
+    public QueueFederateAmbassador(QueueFederate federate) {
         this.federate = federate;
     }
 
-    //----------------------------------------------------------
-    //                    INSTANCE METHODS
-    //----------------------------------------------------------
     private void log(String message) {
         System.out.println("FederateAmbassador: " + message);
     }
@@ -242,37 +213,32 @@ public class ConsumerFederateAmbassador extends NullFederateAmbassador {
                                    OrderType receivedOrdering,
                                    SupplementalReceiveInfo receiveInfo)
             throws FederateInternalError {
-        StringBuilder builder = new StringBuilder("Interaction Received:");
+        StringBuilder attributesMapAsString = new StringBuilder();
 
-        // print the handle
-        builder.append(" handle=" + interactionClass);
-        if (interactionClass.equals(federate.getProductsHandle)) {
-            builder.append(" (DrinkServed)");
+        String interactionName = "";
+        if (interactionClass.equals(federate.getAddCustomer)) {
+            interactionName = "(Customer)";
+
+            for (ParameterHandle parameter : theParameters.keySet()) {
+                byte[] bytes = theParameters.get(federate.customerIdHandle);
+                HLAinteger32BE customerId = new HLA1516eInteger32BE();
+                try {
+                    customerId.decode(bytes);
+                } catch (DecoderException e) {
+                    e.printStackTrace();
+                }
+                int customerIdValue = customerId.getValue();
+                String paramValue = String.valueOf(customerIdValue);
+                if (interactionClass.equals(federate.getAddCustomer)) {
+                    federate.freeDispenser(dispenserIdValue);
+                }
+
+                attributesMapAsString.append(String.format("paramHandle=%s, paramValueInBytes=%s, paramValue=%s \n", parameter, theParameters.get(parameter).length, paramValue));
+            }
         }
-
-        // print the tag
-        builder.append(", tag=" + new String(tag));
-        // print the time (if we have it) we'll get null if we are just receiving
-        // a forwarded call from the other reflect callback above
-        if (time != null) {
-            builder.append(", time=" + ((HLAfloat64Time) time).getValue());
+        if (interactionClass.equals(federate.getFreeWindows)) {
+            interactionName = "(Window)";
         }
-
-        // print the parameer information
-        builder.append(", parameterCount=" + theParameters.size());
-        builder.append("\n");
-        for (ParameterHandle parameter : theParameters.keySet()) {
-            // print the parameter handle
-            builder.append("\tparamHandle=");
-            builder.append(parameter);
-            // print the parameter value
-            builder.append(", paramValue=");
-            builder.append(theParameters.get(parameter).length);
-            builder.append(" bytes");
-            builder.append("\n");
-        }
-
-        log(builder.toString());
     }
 
     @Override
@@ -283,8 +249,4 @@ public class ConsumerFederateAmbassador extends NullFederateAmbassador {
             throws FederateInternalError {
         log("Object Removed: handle=" + theObject);
     }
-
-    //----------------------------------------------------------
-    //                     STATIC METHODS
-    //----------------------------------------------------------
 }

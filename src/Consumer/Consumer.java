@@ -14,10 +14,9 @@ public class Consumer {
         timeToNext = generateTimeToNext();
     }
 
-    public int consume()
-    {
-        timeToNext=generateTimeToNext();
-        int count = random.nextInt(4)+1;
+    public int consume() {
+        timeToNext = generateTimeToNext();
+        int count = random.nextInt(4) + 1;
         System.out.println("I want to consume " + count + ". Next I'll be consuming in " + timeToNext);
         return count;
     }
@@ -26,8 +25,7 @@ public class Consumer {
         return timeToNext;
     }
 
-    private int generateTimeToNext()
-    {
-        return random.nextInt(10)+1;
+    private int generateTimeToNext() {
+        return random.nextInt(10) + 1;
     }
 }

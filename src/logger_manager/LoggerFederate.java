@@ -1,4 +1,4 @@
-package customer_producer_manager;
+package logger_manager;
 
 import hla.rti1516e.*;
 import hla.rti1516e.encoding.EncoderFactory;
@@ -17,21 +17,21 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-public class ProducerFederate {
+public class LoggerFederate {
     public static final String READY_TO_RUN = "ReadyToRun";
-    
+
     private RTIambassador rtiamb;
-    private ProducerFederateAmbassador fedamb;  // created when we connect
+    private LoggerFederateAmbassador fedamb;  // created when we connect
     private HLAfloat64TimeFactory timeFactory; // set when we join
     protected EncoderFactory encoderFactory;     // set when we join
 
     protected InteractionClassHandle addProductsHandle;
-    
+
 
     private void log(String message) {
-        System.out.println("ProducerFederate   : " + message);
+        System.out.println("LoggerFederate   : " + message);
     }
-    
+
     private void waitForUser() {
         log(" >>>>>>>>>> Press Enter to Continue <<<<<<<<<<");
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
@@ -50,7 +50,7 @@ public class ProducerFederate {
 
         // connect
         log("Connecting...");
-        fedamb = new ProducerFederateAmbassador(this);
+        fedamb = new LoggerFederateAmbassador(this);
         rtiamb.connect(fedamb, CallbackModel.HLA_EVOKED);
 
         log("Creating Federation...");
@@ -70,9 +70,9 @@ public class ProducerFederate {
         }
 
         rtiamb.joinFederationExecution(federateName,            // name for the federate
-                "producer",   // federate type
+                "logger",   // federate type
                 "BankSimulationFederation"     // name of federation
-        );
+        );           // modules we want to add
 
         log("Joined Federation as " + federateName);
 
@@ -99,16 +99,16 @@ public class ProducerFederate {
         publishAndSubscribe();
         log("Published and Subscribed");
 
-        Producer producer = new Producer();
+        Logger logger = new Logger();
         while (fedamb.isRunning) {
-            int producedCustomerId = producer.produce();
+            int producedCustomerId = logger.produce();
             ParameterHandleValueMap parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(1);
             ParameterHandle addCustomerIdHandle = rtiamb.getParameterHandle(addProductsHandle, "customerId");
             HLAinteger32BE count = encoderFactory.createHLAinteger32BE(producedCustomerId);
             parameterHandleValueMap.put(addCustomerIdHandle, count.toByteArray());
             rtiamb.sendInteraction(addProductsHandle, parameterHandleValueMap, generateTag());
 
-            advanceTime(producer.getTimeToNext());
+            advanceTime(logger.getTimeToNext());
             log("Time Advanced to " + fedamb.federateTime);
         }
 
@@ -157,12 +157,13 @@ public class ProducerFederate {
     }
 
     public static void main(String[] args) {
-        String federateName = "CustomerProducer";
+        // get a federate name, use "exampleFederate" as default
+        String federateName = "Logger";
         if (args.length != 0) {
             federateName = args[0];
         }
         try {
-            new ProducerFederate().runFederate(federateName);
+            new LoggerFederate().runFederate(federateName);
         } catch (Exception rtie) {
             rtie.printStackTrace();
         }

@@ -1,18 +1,4 @@
-/*
- *   Copyright 2012 The Portico Project
- *
- *   This file is part of portico.
- *
- *   portico is free software; you can redistribute it and/or modify
- *   it under the terms of the Common Developer and Distribution License (CDDL)
- *   as published by Sun Microsystems. For more information see the LICENSE file.
- *
- *   Use of this software is strictly AT YOUR OWN RISK!!!
- *   If something bad happens you do not have permission to come crying to me.
- *   (that goes for your lawyer as well)
- *
- */
-package Consumer;
+package queue_manager;
 
 import hla.rti1516e.*;
 import hla.rti1516e.encoding.EncoderFactory;
@@ -30,19 +16,18 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 
-public class ConsumerFederate {
+public class QueueFederate {
     /**
      * The sync point all federates will sync up on before starting
      */
     public static final String READY_TO_RUN = "ReadyToRun";
 
-    //----------------------------------------------------------
-    //                   INSTANCE VARIABLES
-    //----------------------------------------------------------
     private RTIambassador rtiamb;
-    private ConsumerFederateAmbassador fedamb;  // created when we connect
+    private QueueFederateAmbassador fedamb;  // created when we connect
     private HLAfloat64TimeFactory timeFactory; // set when we join
     protected EncoderFactory encoderFactory;     // set when we join
 
@@ -50,28 +35,29 @@ public class ConsumerFederate {
     protected ObjectClassHandle storageHandle;
     protected AttributeHandle storageMaxHandle;
     protected AttributeHandle storageAvailableHandle;
-    protected InteractionClassHandle getProductsHandle;
+    protected InteractionClassHandle getCustomerChangeQueue;
+    protected InteractionClassHandle getCurrentQueueSize;
+    protected InteractionClassHandle getMoveCustomerToWindow;
+    protected InteractionClassHandle getAssignCustomerToQueue;
+    protected InteractionClassHandle getAddCustomer;
+    protected InteractionClassHandle getFreeWindows;
+    private List<Queue> queues;
+
+    protected ParameterHandle customerIdHandle;
 
     protected int storageMax = 0;
     protected int storageAvailable = 0;
-    //----------------------------------------------------------
-    //                      CONSTRUCTORS
-    //----------------------------------------------------------
 
-    //----------------------------------------------------------
-    //                    INSTANCE METHODS
-    //----------------------------------------------------------
+    public QueueFederate() {
+        queues = new ArrayList<>();
+        queues.add(new Queue(1));
+        queues.add(new Queue(2));
+    }
 
-    /**
-     * This is just a helper method to make sure all logging it output in the same form
-     */
     private void log(String message) {
         System.out.println("ConsumerFederate   : " + message);
     }
 
-    /**
-     * This method will block until the user presses enter
-     */
     private void waitForUser() {
         log(" >>>>>>>>>> Press Enter to Continue <<<<<<<<<<");
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
@@ -102,7 +88,7 @@ public class ConsumerFederate {
 
         // connect
         log("Connecting...");
-        fedamb = new ConsumerFederateAmbassador(this);
+        fedamb = new QueueFederateAmbassador(this);
         rtiamb.connect(fedamb, CallbackModel.HLA_EVOKED);
 
         //////////////////////////////
@@ -113,10 +99,10 @@ public class ConsumerFederate {
         // restaurant FOM modules covering processes, food and drink
         try {
             URL[] modules = new URL[]{
-                    (new File("foms/ProducerConsumer.xml")).toURI().toURL(),
+                    (new File("foms/BankSimulation.xml")).toURI().toURL(),
             };
 
-            rtiamb.createFederationExecution("ProducerConsumerFederation", modules);
+            rtiamb.createFederationExecution("BankSimulationFederation", modules);
             log("Created Federation");
         } catch (FederationExecutionAlreadyExists exists) {
             log("Didn't create federation, it already existed");
@@ -131,8 +117,8 @@ public class ConsumerFederate {
         ////////////////////////////
 
         rtiamb.joinFederationExecution(federateName,            // name for the federate
-                "consumer",   // federate type
-                "ProducerConsumerFederation"     // name of federation
+                "queue",   // federate type
+                "BankSimulationFederation"     // name of federation
         );           // modules we want to add
 
         log("Joined Federation as " + federateName);
@@ -188,9 +174,8 @@ public class ConsumerFederate {
         /////////////////////////////////////
         // 10. do the main simulation loop //
         /////////////////////////////////////
-        Consumer consumer = new Consumer();
         while (fedamb.isRunning) {
-            int consumed = consumer.consume();
+            int consumed = queue.consume();
             if (storageAvailable - consumed >= 0) {
                 ParameterHandleValueMap parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(1);
                 ParameterHandle addProductsCountHandle = rtiamb.getParameterHandle(getProductsHandle, "count");
@@ -201,7 +186,7 @@ public class ConsumerFederate {
                 log("Consuming canceled because of lack of products.");
             }
             // 9.3 request a time advance and wait until we get it
-            advanceTime(consumer.getTimeToNext());
+            advanceTime(queue.getTimeToNext());
             log("Time Advanced to " + fedamb.federateTime);
         }
 
@@ -269,24 +254,26 @@ public class ConsumerFederate {
      * federates produce it.
      */
     private void publishAndSubscribe() throws RTIexception {
-        // subscribe for ProductsStorage
-        this.storageHandle = rtiamb.getObjectClassHandle("HLAobjectRoot.ProductStorage");
-        this.storageMaxHandle = rtiamb.getAttributeHandle(storageHandle, "max");
-        this.storageAvailableHandle = rtiamb.getAttributeHandle(storageHandle, "available");
-//		// package the information into a handle set
-        AttributeHandleSet attributes = rtiamb.getAttributeHandleSetFactory().create();
-        attributes.add(storageMaxHandle);
-        attributes.add(storageAvailableHandle);
-        rtiamb.subscribeObjectClassAttributes(storageHandle, attributes);
+        String iAddCustomer = "HLAinteractionRoot.addCustomer";
+        getAddCustomer = rtiamb.getInteractionClassHandle(iAddCustomer);
+        String iFreeWindows = "HLAinteractionRoot.freeWindows";
+        getFreeWindows = rtiamb.getInteractionClassHandle(iFreeWindows);
 
-
-//		publish GetProducts interaction
-        String iname = "HLAinteractionRoot.ProductsManagment.GetProducts";
-        getProductsHandle = rtiamb.getInteractionClassHandle(iname);
+        String iCustomerChangeQueue = "HLAinteractionRoot.customerChangeQueue";
+        getCustomerChangeQueue = rtiamb.getInteractionClassHandle(iCustomerChangeQueue);
+        String iCurrentQueueSize = "HLAinteractionRoot.currentQueueSize";
+        getCurrentQueueSize = rtiamb.getInteractionClassHandle(iCurrentQueueSize);
+        String iMoveCustomerToWindow = "HLAinteractionRoot.moveCustomerToWindow";
+        getMoveCustomerToWindow = rtiamb.getInteractionClassHandle(iMoveCustomerToWindow);
+        String iAssignCustomerToQueue = "HLAinteractionRoot.assignCustomerToQueue";
+        getAssignCustomerToQueue = rtiamb.getInteractionClassHandle(iAssignCustomerToQueue);
         // do the publication
-        rtiamb.publishInteractionClass(getProductsHandle);
+        rtiamb.publishInteractionClass(getCustomerChangeQueue);
+        rtiamb.publishInteractionClass(getCurrentQueueSize);
+        rtiamb.publishInteractionClass(getMoveCustomerToWindow);
+        rtiamb.publishInteractionClass(getAssignCustomerToQueue);
 
-
+        customerIdHandle = rtiamb.getParameterHandle(rtiamb.getInteractionClassHandle("HLAinteractionRoot.addCustomer"), "customerId");
     }
 
     /**
@@ -315,21 +302,15 @@ public class ConsumerFederate {
         return ("(timestamp) " + System.currentTimeMillis()).getBytes();
     }
 
-    //----------------------------------------------------------
-    //                     STATIC METHODS
-    //----------------------------------------------------------
     public static void main(String[] args) {
-        // get a federate name, use "exampleFederate" as default
-        String federateName = "Consumer";
+        String federateName = "Queue";
         if (args.length != 0) {
             federateName = args[0];
         }
 
         try {
-            // run the example federate
-            new ConsumerFederate().runFederate(federateName);
+            new QueueFederate().runFederate(federateName);
         } catch (Exception rtie) {
-            // an exception occurred, just log the information and exit
             rtie.printStackTrace();
         }
     }
