@@ -40,10 +40,11 @@ public class QueueFederate {
     protected InteractionClassHandle getMoveCustomerToWindow;
     protected InteractionClassHandle getAssignCustomerToQueue;
     protected InteractionClassHandle getAddCustomer;
-    protected InteractionClassHandle getFreeWindows;
+    protected InteractionClassHandle getFreeWindow;
     private List<Queue> queues;
 
     protected ParameterHandle customerIdHandle;
+    protected ParameterHandle windowIdHandle;
 
     protected int storageMax = 0;
     protected int storageAvailable = 0;
@@ -256,8 +257,8 @@ public class QueueFederate {
     private void publishAndSubscribe() throws RTIexception {
         String iAddCustomer = "HLAinteractionRoot.addCustomer";
         getAddCustomer = rtiamb.getInteractionClassHandle(iAddCustomer);
-        String iFreeWindows = "HLAinteractionRoot.freeWindows";
-        getFreeWindows = rtiamb.getInteractionClassHandle(iFreeWindows);
+        String iFreeWindow = "HLAinteractionRoot.freeWindow";
+        getFreeWindow = rtiamb.getInteractionClassHandle(iFreeWindow);
 
         String iCustomerChangeQueue = "HLAinteractionRoot.customerChangeQueue";
         getCustomerChangeQueue = rtiamb.getInteractionClassHandle(iCustomerChangeQueue);
@@ -274,6 +275,7 @@ public class QueueFederate {
         rtiamb.publishInteractionClass(getAssignCustomerToQueue);
 
         customerIdHandle = rtiamb.getParameterHandle(rtiamb.getInteractionClassHandle("HLAinteractionRoot.addCustomer"), "customerId");
+        windowIdHandle = rtiamb.getParameterHandle(rtiamb.getInteractionClassHandle("HLAinteractionRoot.freeWindow"), "windowIdHandle");
     }
 
     /**
@@ -313,5 +315,9 @@ public class QueueFederate {
         } catch (Exception rtie) {
             rtie.printStackTrace();
         }
+    }
+
+    public List<Queue> getQueues() {
+        return queues;
     }
 }

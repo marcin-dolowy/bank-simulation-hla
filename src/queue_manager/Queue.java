@@ -7,4 +7,8 @@ public class Queue {
     public Queue(int id) {
         this.id = id;
     }
+
+    public java.util.Queue<Integer> getQueue() {
+        return queue;
+    }
 }

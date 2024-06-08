@@ -107,23 +107,17 @@ public class WindowFederate {
         enableTimePolicy();
         log("Time Policy Enabled");
 
-
         publishAndSubscribe();
         log("Published and Subscribed");
 
         while (fedamb.isRunning) {
-            int consumed = (int) window1.getServiceTime();
-            if (storageAvailable - consumed >= 0) {
-                ParameterHandleValueMap parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(1);
-                ParameterHandle addProductsCountHandle = rtiamb.getParameterHandle(getProductsHandle, "count");
-                HLAinteger32BE count = encoderFactory.createHLAinteger32BE(consumed);
-                parameterHandleValueMap.put(addProductsCountHandle, count.toByteArray());
-                rtiamb.sendInteraction(getProductsHandle, parameterHandleValueMap, generateTag());
-            } else {
-                log("Consuming canceled because of lack of products.");
-            }
 
-            advanceTime(window.getTimeToNext());
+            //TU NAPISAĆ LOGIKĘ
+
+
+
+
+            advanceTime(1);
             log("Time Advanced to " + fedamb.federateTime);
         }
 
@@ -143,9 +137,7 @@ public class WindowFederate {
     }
 
     private void enableTimePolicy() throws Exception {
-
         HLAfloat64Interval lookahead = timeFactory.makeInterval(fedamb.federateLookahead);
-
         this.rtiamb.enableTimeRegulation(lookahead);
 
         while (fedamb.isRegulating == false) {
@@ -153,7 +145,6 @@ public class WindowFederate {
         }
 
         this.rtiamb.enableTimeConstrained();
-
         while (fedamb.isConstrained == false) {
             rtiamb.evokeMultipleCallbacks(0.1, 0.2);
         }
@@ -161,7 +152,7 @@ public class WindowFederate {
 
     private void publishAndSubscribe() throws RTIexception {
 
-        this.storageHandle = rtiamb.getObjectClassHandle("HLAobjectRoot.ProductStorage");
+        this.storageHandle = rtiamb.getObjectClassHandle("HLAobjectRoot.moveCustomerToWindow");
         this.storageMaxHandle = rtiamb.getAttributeHandle(storageHandle, "max");
         this.storageAvailableHandle = rtiamb.getAttributeHandle(storageHandle, "available");
 
@@ -170,15 +161,13 @@ public class WindowFederate {
         attributes.add(storageAvailableHandle);
         rtiamb.subscribeObjectClassAttributes(storageHandle, attributes);
 
-
-        String iname = "HLAinteractionRoot.ProductsManagment.GetProducts";
+        String iname = "HLAinteractionRoot.freeWindow";
         getProductsHandle = rtiamb.getInteractionClassHandle(iname);
 
         rtiamb.publishInteractionClass(getProductsHandle);
     }
 
     private void advanceTime(double timestep) throws RTIexception {
-
         fedamb.isAdvancing = true;
         HLAfloat64Time time = timeFactory.makeTime(fedamb.federateTime + timestep);
         rtiamb.timeAdvanceRequest(time);

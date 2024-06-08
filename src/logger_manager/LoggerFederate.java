@@ -25,7 +25,18 @@ public class LoggerFederate {
     private HLAfloat64TimeFactory timeFactory; // set when we join
     protected EncoderFactory encoderFactory;     // set when we join
 
-    protected InteractionClassHandle addProductsHandle;
+    protected InteractionClassHandle addCustomer;
+    protected ParameterHandle addCustomerInteractionCustomerId;
+    protected InteractionClassHandle assignCustomerToQueue;
+    protected ParameterHandle assignCustomerToQueueCustomerId;
+    protected InteractionClassHandle currentQueueSize;
+    protected ParameterHandle countHandle;
+    protected InteractionClassHandle customerChangeQueue;
+    protected ParameterHandle countHandle;
+    protected InteractionClassHandle moveCustomerToWindow;
+    protected ParameterHandle countHandle;
+    protected InteractionClassHandle assignCustomerToWindow;
+    protected ParameterHandle countHandle;
 
 
     private void log(String message) {
@@ -107,6 +118,12 @@ public class LoggerFederate {
             HLAinteger32BE count = encoderFactory.createHLAinteger32BE(producedCustomerId);
             parameterHandleValueMap.put(addCustomerIdHandle, count.toByteArray());
             rtiamb.sendInteraction(addProductsHandle, parameterHandleValueMap, generateTag());
+
+            // subscribe for GetProducts interaction
+            String iname = "HLAinteractionRoot.ProductsManagment.AddProducts";
+            getProductsHandle = rtiamb.getInteractionClassHandle( iname );
+            countHandle = rtiamb.getParameterHandle(rtiamb.getInteractionClassHandle( "HLAinteractionRoot.ProductsManagment" ), "count");
+            rtiamb.subscribeInteractionClass(getProductsHandle);
 
             advanceTime(logger.getTimeToNext());
             log("Time Advanced to " + fedamb.federateTime);

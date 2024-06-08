@@ -13,7 +13,7 @@
 		<interactionClass>
 			<name>HLAinteractionRoot</name>
 			<interactionClass>
-				<name>freeWindows</name>
+				<name>freeWindow</name>
 				<sharing>PublishSubscribe</sharing>
 				<transportation>HLAbestEffort</transportation>
 				<order>Receive</order>
