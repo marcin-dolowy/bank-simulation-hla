@@ -214,7 +214,6 @@ public class QueueFederateAmbassador extends NullFederateAmbassador {
                                    OrderType receivedOrdering,
                                    SupplementalReceiveInfo receiveInfo)
             throws FederateInternalError {
-        System.out.println("Dupa3924632");
         String timeAsString = time != null ? String.valueOf(((HLAfloat64Time) time).getValue()) : "";
 
         StringBuilder attributesMapAsString = new StringBuilder();

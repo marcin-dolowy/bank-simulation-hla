@@ -27,7 +27,7 @@ public class Window {
 
 
     private int generateServiceTime() {
-        return random.nextInt(10) + 1;
+        return random.nextInt(5) + 10;
     }
 
     public int getId() {
