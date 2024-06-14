@@ -24,6 +24,7 @@ public class LoggerFederate {
     private LoggerFederateAmbassador fedamb;  // created when we connect
     private HLAfloat64TimeFactory timeFactory; // set when we join
     protected EncoderFactory encoderFactory;     // set when we join
+    protected Logger logger = new Logger();
 
     protected InteractionClassHandle addCustomer;
     protected ParameterHandle addCustomerInteractionCustomerId;
@@ -116,6 +117,7 @@ public class LoggerFederate {
 
         while (fedamb.isRunning) {
             advanceTime(1.0);
+            log("Time Advanced to " + fedamb.federateTime);
         }
 
         rtiamb.resignFederationExecution(ResignAction.DELETE_OBJECTS);

@@ -231,74 +231,72 @@ public class QueueFederate {
                     rtiamb.sendInteraction(getAssignCustomerToQueue, parameterHandleValueMap, generateTag());
                 }
 
-                if (!queue0.getQueue().isEmpty() || !queue1.getQueue().isEmpty()) {
-                    //change customer in queue
-                    if (fedamb.federateTime == changeQueueTime) {
-                        randomQueueIdNumber = rand.nextInt(2);
+                //change customer in queue
+                if (fedamb.federateTime == changeQueueTime) {
+                    randomQueueIdNumber = rand.nextInt(2);
 
-                        if (randomQueueIdNumber == 0) {
-                            int randomCustomerIdNumber = rand.nextInt(queue0.getQueue().size());
-                            int customerId = queue0.getQueue().get(randomCustomerIdNumber);
+                    if (randomQueueIdNumber == 0 && !queue0.getQueue().isEmpty()) {
 
-                            if (randomCustomerIdNumber > queue1.getQueue().size()) {
-                                queue0.getQueue().remove(customerId);
-                                queue1.getQueue().add(customerId);
+                        int randomCustomerIdNumber = rand.nextInt(queue0.getQueue().size());
+                        int customerId = queue0.getQueue().get(randomCustomerIdNumber);
 
-                                parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(2);
-                                ParameterHandle getCustomerChangeQueueHandleCustomerId = rtiamb.getParameterHandle(getCustomerChangeQueue, "customerId");
-                                ParameterHandle getCustomerChangeQueueHandleQueueId = rtiamb.getParameterHandle(getCustomerChangeQueue, "queueId");
-                                HLAinteger32BE cusId = encoderFactory.createHLAinteger32BE(customerId);
-                                HLAinteger32BE queueId = encoderFactory.createHLAinteger32BE(queue0.getId());
-                                parameterHandleValueMap.put(getCustomerChangeQueueHandleCustomerId, cusId.toByteArray());
-                                parameterHandleValueMap.put(getCustomerChangeQueueHandleQueueId, queueId.toByteArray());
-                                rtiamb.sendInteraction(getCustomerChangeQueue, parameterHandleValueMap, generateTag());
-                            }
-                            } else {
-                                int randomCustomerIdNumber = rand.nextInt(queue1.getQueue().size());
-                                int customerId = queue1.getQueue().get(randomCustomerIdNumber);
+                        if (randomCustomerIdNumber > queue1.getQueue().size()) {
+                            queue0.getQueue().remove(customerId);
+                            queue1.getQueue().add(customerId);
 
-                                if (randomCustomerIdNumber > queue0.getQueue().size()) {
-                                    queue1.getQueue().remove(customerId);
-                                    queue0.getQueue().add(customerId);
+                            parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(2);
+                            ParameterHandle getCustomerChangeQueueHandleCustomerId = rtiamb.getParameterHandle(getCustomerChangeQueue, "customerId");
+                            ParameterHandle getCustomerChangeQueueHandleQueueId = rtiamb.getParameterHandle(getCustomerChangeQueue, "queueId");
+                            HLAinteger32BE cusId = encoderFactory.createHLAinteger32BE(customerId);
+                            HLAinteger32BE queueId = encoderFactory.createHLAinteger32BE(queue0.getId());
+                            parameterHandleValueMap.put(getCustomerChangeQueueHandleCustomerId, cusId.toByteArray());
+                            parameterHandleValueMap.put(getCustomerChangeQueueHandleQueueId, queueId.toByteArray());
+                            rtiamb.sendInteraction(getCustomerChangeQueue, parameterHandleValueMap, generateTag());
+                        }
+                    } else if (randomQueueIdNumber == 1 && !queue1.getQueue().isEmpty()) {
+                        int randomCustomerIdNumber = rand.nextInt(queue1.getQueue().size());
+                        int customerId = queue1.getQueue().get(randomCustomerIdNumber);
 
-                                    parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(2);
-                                    ParameterHandle getCustomerChangeQueueHandleCustomerId = rtiamb.getParameterHandle(getCustomerChangeQueue, "customerId");
-                                    ParameterHandle getCustomerChangeQueueHandleQueueId = rtiamb.getParameterHandle(getCustomerChangeQueue, "queueId");
-                                    HLAinteger32BE cusId = encoderFactory.createHLAinteger32BE(customerId);
-                                    HLAinteger32BE queueId = encoderFactory.createHLAinteger32BE(queue1.getId());
-                                    parameterHandleValueMap.put(getCustomerChangeQueueHandleCustomerId, cusId.toByteArray());
-                                    parameterHandleValueMap.put(getCustomerChangeQueueHandleQueueId, queueId.toByteArray());
-                                    rtiamb.sendInteraction(getCustomerChangeQueue, parameterHandleValueMap, generateTag());
-                                }
+                        if (randomCustomerIdNumber > queue0.getQueue().size()) {
+                            queue1.getQueue().remove(customerId);
+                            queue0.getQueue().add(customerId);
 
-                            }
-
-                            int min = (int) fedamb.federateTime;
-                            int max = (int) (fedamb.federateTime + 5.0);
-                            changeQueueTime = rand.nextInt(max - min + 1) + min;
+                            parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(2);
+                            ParameterHandle getCustomerChangeQueueHandleCustomerId = rtiamb.getParameterHandle(getCustomerChangeQueue, "customerId");
+                            ParameterHandle getCustomerChangeQueueHandleQueueId = rtiamb.getParameterHandle(getCustomerChangeQueue, "queueId");
+                            HLAinteger32BE cusId = encoderFactory.createHLAinteger32BE(customerId);
+                            HLAinteger32BE queueId = encoderFactory.createHLAinteger32BE(queue1.getId());
+                            parameterHandleValueMap.put(getCustomerChangeQueueHandleCustomerId, cusId.toByteArray());
+                            parameterHandleValueMap.put(getCustomerChangeQueueHandleQueueId, queueId.toByteArray());
+                            rtiamb.sendInteraction(getCustomerChangeQueue, parameterHandleValueMap, generateTag());
                         }
                     }
 
-                    if (window0IsWaitingForCustomer) {
-                        queue0.getQueue().remove(0);
-                        parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(1);
-                        ParameterHandle getMoveCustomerToWindowHandle = rtiamb.getParameterHandle(getMoveCustomerToWindow, "windowId");
-                        HLAinteger32BE windowId = encoderFactory.createHLAinteger32BE(0);
-                        parameterHandleValueMap.put(getMoveCustomerToWindowHandle, windowId.toByteArray());
-                        rtiamb.sendInteraction(getMoveCustomerToWindow, parameterHandleValueMap, generateTag());
-                        window0IsWaitingForCustomer = false;
-                    }
+                    int min = (int) fedamb.federateTime;
+                    int max = (int) (fedamb.federateTime + 5.0);
+                    changeQueueTime = rand.nextInt(max - min + 1) + min;
+                }
 
-                    if (window1IsWaitingForCustomer) {
-                        queue1.getQueue().remove(0);
-                        parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(1);
-                        ParameterHandle getMoveCustomerToWindowHandle = rtiamb.getParameterHandle(getMoveCustomerToWindow, "windowId");
-                        HLAinteger32BE windowId = encoderFactory.createHLAinteger32BE(1);
-                        parameterHandleValueMap.put(getMoveCustomerToWindowHandle, windowId.toByteArray());
-                        rtiamb.sendInteraction(getMoveCustomerToWindow, parameterHandleValueMap, generateTag());
-                        window1IsWaitingForCustomer = false;
-                    }
-            
+                if (window0IsWaitingForCustomer && !queue0.getQueue().isEmpty()) {
+                    queue0.getQueue().remove(0);
+                    parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(1);
+                    ParameterHandle getMoveCustomerToWindowHandle = rtiamb.getParameterHandle(getMoveCustomerToWindow, "windowId");
+                    HLAinteger32BE windowId = encoderFactory.createHLAinteger32BE(0);
+                    parameterHandleValueMap.put(getMoveCustomerToWindowHandle, windowId.toByteArray());
+                    rtiamb.sendInteraction(getMoveCustomerToWindow, parameterHandleValueMap, generateTag());
+                    window0IsWaitingForCustomer = false;
+                }
+
+                if (window1IsWaitingForCustomer && !queue1.getQueue().isEmpty()) {
+                    queue1.getQueue().remove(0);
+                    parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(1);
+                    ParameterHandle getMoveCustomerToWindowHandle = rtiamb.getParameterHandle(getMoveCustomerToWindow, "windowId");
+                    HLAinteger32BE windowId = encoderFactory.createHLAinteger32BE(1);
+                    parameterHandleValueMap.put(getMoveCustomerToWindowHandle, windowId.toByteArray());
+                    rtiamb.sendInteraction(getMoveCustomerToWindow, parameterHandleValueMap, generateTag());
+                    window1IsWaitingForCustomer = false;
+                }
+
             advanceTime(1.0);
         }
 

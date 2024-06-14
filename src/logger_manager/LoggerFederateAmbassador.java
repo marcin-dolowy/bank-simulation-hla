@@ -8,6 +8,9 @@ import hla.rti1516e.time.HLAfloat64Time;
 import org.portico.impl.hla1516e.types.encoding.HLA1516eInteger32BE;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import java.util.List;
+import java.util.OptionalDouble;
+
 
 public class LoggerFederateAmbassador extends NullFederateAmbassador {
     private LoggerFederate federate;
@@ -155,7 +158,6 @@ public class LoggerFederateAmbassador extends NullFederateAmbassador {
             builder.append(" (AssignCustomerToQueue)");
         } else if (interactionClass.equals(federate.currentQueueSize)) {
             builder.append(" (CurrentQueueSize)");
-            return;
         } else if (interactionClass.equals(federate.customerChangeQueue)) {
             builder.append(" (CustomerChangeQueue)");
         } else if (interactionClass.equals(federate.moveCustomerToWindow)) {
@@ -200,7 +202,10 @@ public class LoggerFederateAmbassador extends NullFederateAmbassador {
                 } else if (parameter.equals(federate.currentQueueSizeSize)) {
                     HLAinteger32BE size = new HLA1516eInteger32BE();
                     size.decode(value);
+                    HLAinteger32BE id = new HLA1516eInteger32BE();
+                    id.decode(value);
                     builder.append(" (Queue Size=").append(size.getValue()).append(")");
+                    federate.logger.getQueueLength().get(id.getValue() - 1).add(size.getValue());
                 }
             } catch (DecoderException e) {
                 builder.append(" Error decoding parameter: ").append(e.getMessage());
@@ -210,6 +215,16 @@ public class LoggerFederateAmbassador extends NullFederateAmbassador {
         }
 
         log(builder.toString());
+        log("Average Queue 0 is " + calculateAverage(federate.logger.getQueueLength().get(0)));
+        log("Average Queue 1 is " + calculateAverage(federate.logger.getQueueLength().get(1)));
+    }
+
+    private double calculateAverage(List<Integer> numbers) {
+        OptionalDouble average = numbers.stream()
+                .mapToDouble(a -> a)
+                .average();
+
+        return average.orElse(0);
     }
 
     @Override

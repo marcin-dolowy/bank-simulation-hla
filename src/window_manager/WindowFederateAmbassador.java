@@ -195,7 +195,6 @@ public class WindowFederateAmbassador extends NullFederateAmbassador {
                                    OrderType receivedOrdering,
                                    SupplementalReceiveInfo receiveInfo)
             throws FederateInternalError {
-        System.out.println("Dupa z okna");
         String timeAsString = time != null ? String.valueOf(((HLAfloat64Time) time).getValue()) : "";
 
         StringBuilder attributesMapAsString = new StringBuilder();
