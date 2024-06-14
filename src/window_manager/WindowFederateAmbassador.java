@@ -195,17 +195,18 @@ public class WindowFederateAmbassador extends NullFederateAmbassador {
                                    OrderType receivedOrdering,
                                    SupplementalReceiveInfo receiveInfo)
             throws FederateInternalError {
+        System.out.println("Dupa z okna");
         String timeAsString = time != null ? String.valueOf(((HLAfloat64Time) time).getValue()) : "";
 
         StringBuilder attributesMapAsString = new StringBuilder();
 
         String interactionName = "";
-        if (interactionClass.equals(federate.moveCustomerToWindow)) {
+        if (interactionClass.equals(federate.assignCustomerToWindow)) {
             interactionName = "(Customer)";
 
             for (ParameterHandle parameter : theParameters.keySet()) {
                 // TUTJA SPRAWDZIC
-                byte[] bytes = theParameters.get(federate.freeWindowID);
+                byte[] bytes = theParameters.get(federate.addWindowIdHandle);
                 HLAinteger32BE windowId = new HLA1516eInteger32BE();
                 try {
                     windowId.decode(bytes);

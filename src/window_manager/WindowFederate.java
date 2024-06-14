@@ -26,7 +26,10 @@ public class WindowFederate {
     protected AttributeHandle storageAvailableHandle;
 
     protected InteractionClassHandle freeWindowID;
+    protected InteractionClassHandle assignCustomerToWindow;
     protected InteractionClassHandle moveCustomerToWindow;
+
+    protected ParameterHandle addWindowIdHandle;
 
     private double serviceEndTime = 5;
 
@@ -136,12 +139,12 @@ public class WindowFederate {
     private void serviceCustomerInWindow(Window window) throws FederateNotExecutionMember, NotConnected, NameNotFound, InvalidInteractionClassHandle, RTIinternalError, InteractionClassNotPublished, InteractionParameterNotDefined, InteractionClassNotDefined, SaveInProgress, RestoreInProgress {
         if (window.isAvailable()) {
             window.startService(fedamb.federateTime);
-
-            if (fedamb.federateTime == serviceEndTime) {
+        } else {
+            if (fedamb.federateTime == window.getServiceTime()) {
                 window.endService();
 
                 ParameterHandleValueMap parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(1);
-                ParameterHandle addWindowIdHandle = rtiamb.getParameterHandle(freeWindowID, "windowId");
+                addWindowIdHandle = rtiamb.getParameterHandle(freeWindowID, "windowId");
                 HLAinteger32BE windowID = encoderFactory.createHLAinteger32BE(window.getId());
 
                 parameterHandleValueMap.put(addWindowIdHandle, windowID.toByteArray());
@@ -167,7 +170,11 @@ public class WindowFederate {
     private void publishAndSubscribe() throws RTIexception {
         String moveCustomerToWindowName = "HLAinteractionRoot.moveCustomerToWindow";
         this.moveCustomerToWindow = rtiamb.getInteractionClassHandle(moveCustomerToWindowName);
-        rtiamb.subscribeInteractionClass(moveCustomerToWindow);
+        rtiamb.subscribeInteractionClass(this.moveCustomerToWindow);
+
+        String assignCustomerToWindow = "HLAinteractionRoot.assignCustomerToWindow";
+        this.assignCustomerToWindow = rtiamb.getInteractionClassHandle(assignCustomerToWindow);
+        rtiamb.publishInteractionClass(this.assignCustomerToWindow);
 
         String freeWindowName = "HLAinteractionRoot.freeWindow";
         this.freeWindowID = rtiamb.getInteractionClassHandle(freeWindowName);

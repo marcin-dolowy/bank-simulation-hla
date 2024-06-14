@@ -1,1 +1,1 @@
-ERROR [main] portico.lrc.jgroups: FAILURE createFederation: already exists, name=ProducerConsumerFederation
+ERROR [main] portico.lrc.jgroups: FAILURE createFederation: already exists, name=BankSimulationFederation

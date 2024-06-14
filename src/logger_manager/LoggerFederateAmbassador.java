@@ -155,6 +155,7 @@ public class LoggerFederateAmbassador extends NullFederateAmbassador {
             builder.append(" (AssignCustomerToQueue)");
         } else if (interactionClass.equals(federate.currentQueueSize)) {
             builder.append(" (CurrentQueueSize)");
+            return;
         } else if (interactionClass.equals(federate.customerChangeQueue)) {
             builder.append(" (CustomerChangeQueue)");
         } else if (interactionClass.equals(federate.moveCustomerToWindow)) {

@@ -127,6 +127,7 @@ public class QueueFederateAmbassador extends NullFederateAmbassador {
                                        OrderType receivedOrdering,
                                        SupplementalReflectInfo reflectInfo)
             throws FederateInternalError {
+
         StringBuilder builder = new StringBuilder("Reflection for object:");
 
         // print the handle
@@ -213,6 +214,7 @@ public class QueueFederateAmbassador extends NullFederateAmbassador {
                                    OrderType receivedOrdering,
                                    SupplementalReceiveInfo receiveInfo)
             throws FederateInternalError {
+        System.out.println("Dupa3924632");
         String timeAsString = time != null ? String.valueOf(((HLAfloat64Time) time).getValue()) : "";
 
         StringBuilder attributesMapAsString = new StringBuilder();

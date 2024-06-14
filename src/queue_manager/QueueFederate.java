@@ -185,8 +185,8 @@ public class QueueFederate {
             HLAinteger32BE queue0Size = encoderFactory.createHLAinteger32BE(queue0.getQueue().size());
             parameterHandleValueMap.put(getCurrentQueueSizeHandleQueue0Id, queue0Id.toByteArray());
             parameterHandleValueMap.put(getCurrentQueueSizeHandleQueue0Size, queue0Size.toByteArray());
-            rtiamb.sendInteraction(getCurrentQueueSize, parameterHandleValueMap, generateTag());
-            //send current queue1 size
+//            rtiamb.sendInteraction(getCurrentQueueSize, parameterHandleValueMap, generateTag());
+//            //send current queue1 size
             parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(2);
             ParameterHandle getCurrentQueueSizeHandleQueue1Id = rtiamb.getParameterHandle(getCurrentQueueSize, "queueId");
             ParameterHandle getCurrentQueueSizeHandleQueue1Size = rtiamb.getParameterHandle(getCurrentQueueSize, "size");
@@ -194,24 +194,30 @@ public class QueueFederate {
             HLAinteger32BE queue1Size = encoderFactory.createHLAinteger32BE(queue1.getQueue().size());
             parameterHandleValueMap.put(getCurrentQueueSizeHandleQueue1Id, queue1Id.toByteArray());
             parameterHandleValueMap.put(getCurrentQueueSizeHandleQueue1Size, queue1Size.toByteArray());
-            rtiamb.sendInteraction(getCurrentQueueSize, parameterHandleValueMap, generateTag());
+//            rtiamb.sendInteraction(getCurrentQueueSize, parameterHandleValueMap, generateTag());
 
             //assign customer to q0 or q1
-            int cid = customersWaitingToAddToQueue.poll();
+            Integer cid = customersWaitingToAddToQueue.poll();
             int randomQueueIdNumber = rand.nextInt(2);
-            if (randomQueueIdNumber == 0) {
+            if(!customersWaitingToAddToQueue.isEmpty()) {
+                System.out.println(customersWaitingToAddToQueue.size());
+            }
+//            System.out.println(randomQueueIdNumber);
+//            System.out.println(cid);
+            if (randomQueueIdNumber == 0 && cid != null) {
                 queue0.getQueue().add(cid);
 
                 parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(2);
                 ParameterHandle getAssignCustomerToQueueHandleQueue0Id = rtiamb.getParameterHandle(getAssignCustomerToQueue, "customerId");
                 ParameterHandle getAssignCustomerToQueueHandleQueue0Size = rtiamb.getParameterHandle(getAssignCustomerToQueue, "queueId");
+
                 HLAinteger32BE customerId = encoderFactory.createHLAinteger32BE(cid);
                 queue0Id = encoderFactory.createHLAinteger32BE(queue0.getId());
                 parameterHandleValueMap.put(getAssignCustomerToQueueHandleQueue0Id, customerId.toByteArray());
                 parameterHandleValueMap.put(getAssignCustomerToQueueHandleQueue0Size, queue0Id.toByteArray());
                 rtiamb.sendInteraction(getAssignCustomerToQueue, parameterHandleValueMap, generateTag());
 
-            } else {
+            } else if (randomQueueIdNumber == 1 && cid != null) {
                 queue1.getQueue().add(cid);
 
                 parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(2);
@@ -231,7 +237,7 @@ public class QueueFederate {
 
                     if (randomQueueIdNumber == 0) {
                         int randomCustomerIdNumber = rand.nextInt(queue0.getQueue().size());
-                        int customerId = queue0.getQueue().get(randomQueueIdNumber);
+                        int customerId = queue0.getQueue().get(randomCustomerIdNumber);
 
                         if (randomCustomerIdNumber > queue1.getQueue().size()) {
                             queue0.getQueue().remove(customerId);
@@ -249,7 +255,7 @@ public class QueueFederate {
 
                     } else {
                         int randomCustomerIdNumber = rand.nextInt(queue1.getQueue().size());
-                        int customerId = queue1.getQueue().get(randomQueueIdNumber);
+                        int customerId = queue1.getQueue().get(randomCustomerIdNumber);
 
                         if (randomCustomerIdNumber > queue0.getQueue().size()) {
                             queue1.getQueue().remove(customerId);
@@ -291,6 +297,8 @@ public class QueueFederate {
                 rtiamb.sendInteraction(getMoveCustomerToWindow, parameterHandleValueMap, generateTag());
                 window1IsWaitingForCustomer = false;
             }
+
+            advanceTime(1.0);
         }
 
 
@@ -366,6 +374,7 @@ public class QueueFederate {
         String iFreeWindow = "HLAinteractionRoot.freeWindow";
         getFreeWindow = rtiamb.getInteractionClassHandle(iFreeWindow);
 
+
         String iCustomerChangeQueue = "HLAinteractionRoot.customerChangeQueue";
         getCustomerChangeQueue = rtiamb.getInteractionClassHandle(iCustomerChangeQueue);
         String iCurrentQueueSize = "HLAinteractionRoot.currentQueueSize";
@@ -380,8 +389,10 @@ public class QueueFederate {
         rtiamb.publishInteractionClass(getMoveCustomerToWindow);
         rtiamb.publishInteractionClass(getAssignCustomerToQueue);
 
-        customerIdHandle = rtiamb.getParameterHandle(rtiamb.getInteractionClassHandle("HLAinteractionRoot.addCustomer"), "customerId");
-        windowIdHandle = rtiamb.getParameterHandle(rtiamb.getInteractionClassHandle("HLAinteractionRoot.freeWindow"), "windowId");
+        customerIdHandle = rtiamb.getParameterHandle(getAddCustomer, "customerId");
+        windowIdHandle = rtiamb.getParameterHandle(getFreeWindow, "windowId");
+        rtiamb.subscribeInteractionClass(getFreeWindow);
+        rtiamb.subscribeInteractionClass(getAddCustomer);
     }
 
     /**
