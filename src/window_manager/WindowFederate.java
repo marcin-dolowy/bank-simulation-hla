@@ -169,16 +169,16 @@ public class WindowFederate {
 
     private void publishAndSubscribe() throws RTIexception {
         String moveCustomerToWindowName = "HLAinteractionRoot.moveCustomerToWindow";
-        this.moveCustomerToWindow = rtiamb.getInteractionClassHandle(moveCustomerToWindowName);
-        rtiamb.subscribeInteractionClass(this.moveCustomerToWindow);
+        moveCustomerToWindow = rtiamb.getInteractionClassHandle(moveCustomerToWindowName);
+        rtiamb.subscribeInteractionClass(moveCustomerToWindow);
 
-        String assignCustomerToWindow = "HLAinteractionRoot.assignCustomerToWindow";
-        this.assignCustomerToWindow = rtiamb.getInteractionClassHandle(assignCustomerToWindow);
-        rtiamb.publishInteractionClass(this.assignCustomerToWindow);
+        String assignCustomerToWindowName = "HLAinteractionRoot.assignCustomerToWindow";
+        assignCustomerToWindow = rtiamb.getInteractionClassHandle(assignCustomerToWindowName);
+        rtiamb.publishInteractionClass(assignCustomerToWindow);
 
         String freeWindowName = "HLAinteractionRoot.freeWindow";
-        this.freeWindowID = rtiamb.getInteractionClassHandle(freeWindowName);
-        rtiamb.publishInteractionClass(this.freeWindowID);
+        freeWindowID = rtiamb.getInteractionClassHandle(freeWindowName);
+        rtiamb.publishInteractionClass(freeWindowID);
     }
 
     private void advanceTime(double timestep) throws RTIexception {
