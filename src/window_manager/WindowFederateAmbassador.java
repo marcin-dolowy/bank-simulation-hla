@@ -204,7 +204,6 @@ public class WindowFederateAmbassador extends NullFederateAmbassador {
             interactionName = "(Customer)";
 
             for (ParameterHandle parameter : theParameters.keySet()) {
-                // TUTJA SPRAWDZIC
                 byte[] bytes = theParameters.get(federate.addWindowIdHandle);
                 HLAinteger32BE windowId = new HLA1516eInteger32BE();
                 try {

@@ -30,6 +30,7 @@ public class WindowFederate {
     protected InteractionClassHandle moveCustomerToWindow;
 
     protected ParameterHandle addWindowIdHandle;
+    protected ParameterHandle assignCustomerToWindowHandle;
 
     private double serviceEndTime = 5;
 
@@ -139,6 +140,13 @@ public class WindowFederate {
     private void serviceCustomerInWindow(Window window) throws FederateNotExecutionMember, NotConnected, NameNotFound, InvalidInteractionClassHandle, RTIinternalError, InteractionClassNotPublished, InteractionParameterNotDefined, InteractionClassNotDefined, SaveInProgress, RestoreInProgress {
         if (window.isAvailable()) {
             window.startService(fedamb.federateTime);
+
+            ParameterHandleValueMap parameterHandleValueMap = rtiamb.getParameterHandleValueMapFactory().create(1);
+            assignCustomerToWindowHandle = rtiamb.getParameterHandle(assignCustomerToWindow, "windowId");
+            HLAinteger32BE windowID = encoderFactory.createHLAinteger32BE(window.getId());
+            parameterHandleValueMap.put(assignCustomerToWindowHandle, windowID.toByteArray());
+            rtiamb.sendInteraction(assignCustomerToWindow, parameterHandleValueMap, generateTag());
+
         } else {
             if (fedamb.federateTime == window.getServiceTime()) {
                 window.endService();
