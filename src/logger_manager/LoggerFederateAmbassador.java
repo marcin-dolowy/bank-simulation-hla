@@ -174,6 +174,7 @@ public class LoggerFederateAmbassador extends NullFederateAmbassador {
 
         builder.append(", parameterCount=").append(theParameters.size()).append("\n");
 
+        int currentQueueSizeSize = 5;
         for (ParameterHandle parameter : theParameters.keySet()) {
             builder.append("\tparamHandle=").append(parameter);
             byte[] value = theParameters.get(parameter);
@@ -193,6 +194,7 @@ public class LoggerFederateAmbassador extends NullFederateAmbassador {
                         parameter.equals(federate.customerChangeQueueQueueId)) {
                     HLAinteger32BE id = new HLA1516eInteger32BE();
                     id.decode(value);
+                    currentQueueSizeSize = id.getValue();
                     builder.append(" (Queue ID=").append(id.getValue()).append(")");
                 } else if (parameter.equals(federate.moveCustomerToWindowWindowId) ||
                         parameter.equals(federate.assignCustomerToWindowWindowId)) {
@@ -202,10 +204,8 @@ public class LoggerFederateAmbassador extends NullFederateAmbassador {
                 } else if (parameter.equals(federate.currentQueueSizeSize)) {
                     HLAinteger32BE size = new HLA1516eInteger32BE();
                     size.decode(value);
-                    HLAinteger32BE id = new HLA1516eInteger32BE();
-                    id.decode(value);
                     builder.append(" (Queue Size=").append(size.getValue()).append(")");
-                    federate.logger.getQueueLength().get(id.getValue() - 1).add(size.getValue());
+                    federate.logger.getQueueLength().get(currentQueueSizeSize).add(size.getValue());
                 }
             } catch (DecoderException e) {
                 builder.append(" Error decoding parameter: ").append(e.getMessage());

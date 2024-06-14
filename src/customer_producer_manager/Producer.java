@@ -25,6 +25,6 @@ public class Producer {
     }
 
     private int generateTimeToNext() {
-        return random.nextInt(10) + 1;
+        return random.nextInt(2) + 1;
     }
 }
