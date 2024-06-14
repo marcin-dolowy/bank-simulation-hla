@@ -232,7 +232,7 @@ public class QueueFederate {
                 }
 
                 //change customer in queue
-                if (fedamb.federateTime == changeQueueTime) {
+                if (false && fedamb.federateTime == changeQueueTime) {
                     randomQueueIdNumber = rand.nextInt(2);
 
                     if (randomQueueIdNumber == 0 && !queue0.getQueue().isEmpty()) {

@@ -42,6 +42,8 @@ public class LoggerFederate {
     protected InteractionClassHandle assignCustomerToWindow;
     protected ParameterHandle assignCustomerToWindowCustomerId;
     protected ParameterHandle assignCustomerToWindowWindowId;
+    protected InteractionClassHandle freeWindow;
+    protected ParameterHandle freeWindowWindowId;
 
 
     private void log(String message) {
@@ -168,6 +170,10 @@ public class LoggerFederate {
         this.assignCustomerToWindow = injectSubscribeInteraction("HLAinteractionRoot.assignCustomerToWindow",
                 "assignCustomerToWindowCustomerId", "assignCustomerToWindowWindowId",
                 "customerId", "windowId");
+
+        this.freeWindow = injectSubscribeInteraction("HLAinteractionRoot.freeWindow",
+                "freeWindowWindowId", null,
+                "windowId", null);
     }
 
     private InteractionClassHandle injectSubscribeInteraction(String iname,

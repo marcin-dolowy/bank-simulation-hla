@@ -156,6 +156,8 @@ public class LoggerFederateAmbassador extends NullFederateAmbassador {
             builder.append(" (AddCustomer)");
         } else if (interactionClass.equals(federate.assignCustomerToQueue)) {
             builder.append(" (AssignCustomerToQueue)");
+        } else if (interactionClass.equals(federate.freeWindow)) {
+            builder.append(" (FreeWindow)");
         } else if (interactionClass.equals(federate.currentQueueSize)) {
             builder.append(" (CurrentQueueSize)");
         } else if (interactionClass.equals(federate.customerChangeQueue)) {
@@ -197,6 +199,7 @@ public class LoggerFederateAmbassador extends NullFederateAmbassador {
                     currentQueueSizeSize = id.getValue();
                     builder.append(" (Queue ID=").append(id.getValue()).append(")");
                 } else if (parameter.equals(federate.moveCustomerToWindowWindowId) ||
+                        parameter.equals(federate.freeWindowWindowId) ||
                         parameter.equals(federate.assignCustomerToWindowWindowId)) {
                     HLAinteger32BE id = new HLA1516eInteger32BE();
                     id.decode(value);
